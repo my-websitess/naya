@@ -617,11 +617,29 @@ function renderChips(){
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  // Firestore se Admin ki live categories fetch karne ke liye logic
+  async function loadCategoriesFromFirestore() {
+    try {
+      const snap = await getDocs(collection(db, "categories"));
+      if (!snap.empty) {
+        const catNames = snap.docs.map(doc => doc.data().name).filter(Boolean);
+        catNames.sort((a, b) => a.localeCompare(b));
+        dynamicCategories = ['All', ...catNames];
+        renderChips();
+      }
+    } catch (err) {
+      console.error("Category fetch error:", err);
+    }
+  }
+
   let lastDoc = null;
   let isLoading = false;
   const FETCH_LIMIT = 25;
 
   async function loadInitialProducts() {
+    // Categories bhi load karein
+    await loadCategoriesFromFirestore();
+
     try {
       const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(FETCH_LIMIT));
       const snapshot = await getDocs(q);
@@ -652,6 +670,9 @@ function renderChips(){
       window.setProducts([], false);
     }
   }
+
+  // Baaki LoadMore ka logic as-is rahega...
+</script>
 
   window.loadMoreFromFirestore = async function() {
     if (isLoading || !lastDoc) return;
