@@ -441,25 +441,28 @@
     document.getElementById('selCount').textContent = `${selected.size} item${selected.size>1?'s':''} selected`;
   }
 
-  const MASTER_CATS = ['All', 'SAREE', 'KURTI', 'SINGLE KURTI', 'LEHENGA', '3 PIECE', '2 PIECE', 'DUPATTA', 'BLOUSE'];
+// Hardcoded array ke bajaye dynamic array
+let dynamicCategories = ['All'];
 
-  function renderChips(){
-    const wrap = document.getElementById('catChips');
-    const loadedCats = products.map(p=>p.category);
-    const cats = Array.from(new Set([...MASTER_CATS, ...loadedCats]));
-    wrap.innerHTML = cats.map(c=>
-      `<button class="cat-chip ${c===activeCategory?'active':''}" data-cat="${c}">${c}</button>`
-    ).join('');
-    wrap.querySelectorAll('.cat-chip').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        activeCategory = btn.dataset.cat;
-        visibleCount = PAGE_SIZE;
-        render();
-        checkAndFetchMore();
-      });
+function renderChips(){
+  const wrap = document.getElementById('catChips');
+  const loadedCats = products.map(p => p.category);
+  // Admin se aayi categories aur loaded products ki categories combine hongi
+  const cats = Array.from(new Set([...dynamicCategories, ...loadedCats]));
+  
+  wrap.innerHTML = cats.map(c =>
+    `<button class="cat-chip ${c === activeCategory ? 'active' : ''}" data-cat="${c}">${c}</button>`
+  ).join('');
+  
+  wrap.querySelectorAll('.cat-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCategory = btn.dataset.cat;
+      visibleCount = PAGE_SIZE;
+      render();
+      checkAndFetchMore();
     });
-  }
-
+  });
+}
   function checkAndFetchMore(){
     const filtered = getFiltered();
     if(filtered.length === 0 && hasMoreFromFirestore && window.loadMoreFromFirestore){
