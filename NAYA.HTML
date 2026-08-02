@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rangrezz Studio — Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1B0E14;
+    --bg-elevated:#241220;
+    --bg-card:#2E1620;
+    --ivory:#F5E9DD;
+    --ivory-dim:#C9B8AE;
+    --gold:#D4A657;
+    --marigold:#E8873A;
+    --blush:#E8B4C4;
+    --line: rgba(245,233,221,0.14);
+    --whatsapp:#3FA772;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(212,166,87,0.10), transparent 45%),
+      radial-gradient(circle at 90% 20%, rgba(232,180,196,0.08), transparent 40%),
+      var(--bg);
+    color:var(--ivory);
+    font-family:'Manrope', sans-serif;
+    min-height:100vh;
+    padding-bottom:70px;
+  }
+  header{ padding:36px 20px 20px; text-align:center; border-bottom:1px solid var(--line); }
+  .eyebrow{ font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:10px; }
+  h1{ font-family:'Fraunces', serif; font-weight:700; font-size:clamp(30px,6vw,48px); margin:0 0 8px; letter-spacing:-0.01em; }
+  h1 em{ color:var(--marigold); font-style:italic; }
+  .tagline{ color:var(--ivory-dim); font-size:15px; max-width:440px; margin:0 auto; }
+
+  .controls{ max-width:1080px; margin:28px auto 0; padding:0 20px; }
+  .search-row{ position:relative; }
+  .search-row svg{ position:absolute; left:16px; top:50%; transform:translateY(-50%); width:18px; height:18px; stroke:var(--ivory-dim); }
+  .search-row input{ width:100%; padding:15px 42px 15px 46px; background:var(--bg-elevated); border:1px solid var(--line); border-radius:14px; color:var(--ivory); font-family:'Manrope', sans-serif; font-size:15px; }
+  .search-row input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+  .search-row input::placeholder{ color:var(--ivory-dim); opacity:.65; }
+
+  /* SEARCH CROSS BUTTON */
+  .clear-search-btn{
+    position:absolute;
+    right:14px;
+    top:50%;
+    transform:translateY(-50%);
+    background:none;
+    border:none;
+    color:var(--ivory-dim);
+    font-size:20px;
+    cursor:pointer;
+    display:none;
+    padding:4px;
+    line-height:1;
+  }
+  .clear-search-btn:hover{ color:var(--gold); }
+
+  .try-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .try-chip{ font-size:12.5px; color:var(--ivory-dim); background:transparent; border:1px dashed var(--line); border-radius:999px; padding:6px 12px; cursor:pointer; font-family:'Manrope',sans-serif; }
+  .try-chip:hover{ border-color:var(--gold); color:var(--gold); }
+
+  .filter-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top:20px; }
+  .cat-chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .cat-chip{ font-family:'Manrope',sans-serif; font-size:13px; font-weight:600; padding:8px 15px; border-radius:999px; border:1.5px dashed var(--gold); background:transparent; color:var(--ivory); cursor:pointer; }
+  .cat-chip.active{ background:var(--gold); color:#211016; border-style:solid; }
+  select#sortBy{ background:var(--bg-elevated); color:var(--ivory); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-family:'Manrope',sans-serif; font-size:13px; }
+
+  .count-row{ max-width:1080px; margin:16px auto 0; padding:0 20px; font-size:13px; color:var(--ivory-dim); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .select-all-btn{ background:transparent; border:1px dashed var(--gold); color:var(--gold); border-radius:999px; padding:5px 12px; font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .select-all-btn:hover{ background:var(--gold); color:#211016; }
+
+  .grid{ max-width:1080px; margin:14px auto 0; padding:0 20px 40px; display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:18px; }
+  .card{ background:var(--bg-card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:outline .15s ease; }
+  .card.selected{ outline:2px solid var(--gold); outline-offset:-1px; }
+
+  .swatch{ position:relative; height:150px; display:flex; align-items:flex-end; padding:12px; overflow:hidden; cursor:pointer;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.25) 1px, transparent 1.4px), linear-gradient(135deg, var(--g1), var(--g2));
+    background-size: 14px 14px, cover; }
+  .swatch img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; opacity:0; transition:opacity .35s ease; }
+  .swatch img.loaded{ opacity:1; }
+  .swatch::after{ content:""; position:absolute; left:0; right:0; bottom:-1px; height:12px; z-index:2; background:var(--bg-card);
+    clip-path: polygon(0% 0%,4% 100%,8% 0%,12% 100%,16% 0%,20% 100%,24% 0%,28% 100%,32% 0%,36% 100%,40% 0%,44% 100%,48% 0%,52% 100%,56% 0%,60% 100%,64% 0%,68% 100%,72% 0%,76% 100%,80% 0%,84% 100%,88% 0%,92% 100%,96% 0%,100% 100%,100% 0%); }
+  .swatch span{ position:relative; z-index:1; font-family:'Fraunces', serif; font-style:italic; font-weight:600; font-size:13px; color:rgba(255,255,255,0.92); text-shadow:0 1px 3px rgba(0,0,0,0.35); }
+
+  .select-box{ position:absolute; top:8px; left:8px; z-index:3; width:24px; height:24px; border-radius:50%; border:2px solid rgba(255,255,255,0.9); background:rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .select-box.checked{ background:var(--gold); border-color:var(--gold); }
+  .select-box svg{ width:13px; height:13px; opacity:0; }
+  .select-box.checked svg{ opacity:1; }
+
+  .card-body{ padding:14px 14px 16px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .cat-tag{ align-self:flex-start; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; border:1px dashed var(--blush); color:var(--blush); border-radius:999px; padding:3px 9px; }
+  .card-name{ font-size:14.5px; font-weight:600; line-height:1.3; }
+  .card-price{ font-family:'Fraunces', serif; font-weight:700; font-size:19px; color:var(--gold); margin-top:auto; }
+
+  .empty{ max-width:1080px; margin:30px auto; padding:40px 20px; text-align:center; color:var(--ivory-dim); }
+  .empty strong{ display:block; color:var(--ivory); font-family:'Fraunces',serif; font-size:20px; margin-bottom:6px; }
+
+  .load-more-wrap{ text-align:center; padding:8px 0 40px; }
+  #loadMoreBtn{ background:transparent; border:1.5px solid var(--gold); color:var(--gold); padding:11px 26px; border-radius:999px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
+  #loadMoreBtn:hover{ background:var(--gold); color:#211016; }
+  #loadMoreBtn:disabled{ opacity:0.6; cursor:not-allowed; }
+
+  .selection-bar{ position:fixed; left:0; right:0; bottom:0; background:var(--bg-elevated); border-top:1px solid var(--gold); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; z-index:60; transform:translateY(110%); transition:transform .25s ease; }
+  .selection-bar.show{ transform:translateY(0); }
+  .selection-bar .count{ font-weight:700; font-family:'Fraunces',serif; font-size:15px; }
+  .selection-bar .actions{ display:flex; gap:10px; }
+  .clear-btn{ background:transparent; border:1px solid var(--line); color:var(--ivory-dim); padding:10px 16px; border-radius:999px; font-family:'Manrope',sans-serif; font-size:13px; cursor:pointer; }
+  
+  .send-sel-btn{ background:transparent; border:1.5px solid var(--whatsapp); color:var(--whatsapp); border-radius:999px; padding:10px 16px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
+  .send-sel-btn svg{ width:15px; height:15px; }
+  .pdf-btn{ background:var(--gold); color:#211016; border:none; border-radius:999px; padding:10px 18px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
+  .pdf-btn svg{ width:15px; height:15px; }
+  .pdf-btn:disabled{ opacity:.6; cursor:wait; }
+
+  footer{ text-align:center; padding:24px 20px 40px; color:var(--ivory-dim); font-size:12px; border-top:1px solid var(--line); }
+
+  @media (max-width:480px){
+    .grid{ grid-template-columns:repeat(2, 1fr); gap:12px; }
+    .filter-row{ flex-direction:column; align-items:stretch; }
+    select#sortBy{ width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">WhatsApp Catalog</div>
+  <h1> Rangrezz <em>Studio</em></h1>
+  <p class="tagline">Select karo, share karo — kisi ko bhi, seedha WhatsApp par.</p>
+</header>
+
+<div class="controls">
+  <div class="search-row">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input id="searchInput" type="text" placeholder="Try: saree under 1500, kurti above 400...">
+    <button id="clearSearchBtn" class="clear-search-btn" title="Clear search">&times;</button>
+  </div>
+  <div class="try-row">
+    <button class="try-chip" data-q="saree under 1000">saree under 1000</button>
+    <button class="try-chip" data-q="kurti under 400">kurti under 400</button>
+    <button class="try-chip" data-q="lehenga above 3000">lehenga above 3000</button>
+    <button class="try-chip" data-q="dupatta under 300">dupatta under 300</button>
+  </div>
+  <div class="filter-row">
+    <div class="cat-chips" id="catChips"></div>
+    <select id="sortBy">
+      <option value="relevance">Sort: Relevance</option>
+      <option value="priceLow">Price: Low to High</option>
+      <option value="priceHigh">Price: High to Low</option>
+    </select>
+  </div>
+</div>
+
+<div class="count-row">
+  <span id="countText"></span>
+  <button class="select-all-btn" id="selectAllBtn">Select All</button>
+</div>
+<div class="grid" id="grid"></div>
+<div id="emptyState" style="display:none" class="empty">
+  <strong>Koi item nahi mila</strong>
+  Price range badha ke ya category badal ke dekhein.
+</div>
+<div class="load-more-wrap" id="loadMoreWrap">
+  <button id="loadMoreBtn">Load more</button>
+</div>
+
+<footer>Rangrezz Studio Catalog</footer>
+
+<div class="selection-bar" id="selectionBar">
+  <div class="count" id="selCount">0 items selected</div>
+  <div class="actions">
+    <button class="clear-btn" id="clearSelBtn">Clear</button>
+    <button class="send-sel-btn" id="sendSelectedBtn">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.9.53 3.68 1.44 5.2L2 22l4.94-1.4A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3.06.87.85-2.98-.2-.32A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>
+      Photo
+    </button>
+    <button class="pdf-btn" id="sendPdfBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+      <span id="pdfBtnLabel">PDF</span>
+    </button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  let products = [];
+  let productsLoaded = false;
+  let hasMoreFromFirestore = true;
+  const PAGE_SIZE = 12;
+  let visibleCount = PAGE_SIZE;
+  let selected = new Set();
+
+  window.setProducts = function(data, hasMore = true){
+    productsLoaded = true;
+    products = data;
+    hasMoreFromFirestore = hasMore;
+    visibleCount = PAGE_SIZE;
+    render();
+  };
+
+  window.appendProducts = function(newProducts, hasMore = true){
+    const existingIds = new Set(products.map(p => p.id));
+    const uniqueNew = newProducts.filter(p => !existingIds.has(p.id));
+    products = [...products, ...uniqueNew];
+    hasMoreFromFirestore = hasMore;
+    visibleCount = products.length;
+    render();
+  };
+
+  window.updateHasMore = function(hasMore){
+    hasMoreFromFirestore = hasMore;
+    render();
+  };
+
+  const CAT_COLORS = {
+    'SAREE':['#7A1E3C','#D4A657'], 'KURTI':['#1F5C52','#6FBFAE'], 'SINGLE KURTI':['#1F5C52','#6FBFAE'],
+    'LEHENGA':['#8E2A5B','#E8B4C4'], '3 PIECE':['#7A4A1E','#E8873A'], '2 PIECE':['#7A4A1E','#E8873A'],
+    'DUPATTA':['#4A2E6E','#B48CD9'], 'BLOUSE':['#6E1F1F','#C9622F']
+  };
+  function getColors(cat){ return CAT_COLORS[cat] || ['#4A4A52','#7A7A85']; }
+
+  let activeCategory = 'All';
+  let searchQuery = '';
+  let sortBy = 'relevance';
+
+  function parseQuery(q){
+    q = q.toLowerCase().trim();
+    let minPrice = null, maxPrice = null;
+    const between = q.match(/between\s*(\d+)\s*(?:and|to|-)\s*(\d+)/);
+    const under = q.match(/(?:under|below|se kam)\s*(\d+)/);
+    const above = q.match(/(?:above|over|se zyada|se jyada)\s*(\d+)/);
+    if(between){ minPrice = parseInt(between[1]); maxPrice = parseInt(between[2]); }
+    if(under){ maxPrice = parseInt(under[1]); }
+    if(above){ minPrice = parseInt(above[1]); }
+    let text = q
+      .replace(/between\s*\d+\s*(?:and|to|-)\s*\d+/, '')
+      .replace(/(?:under|below|se kam)\s*\d+/, '')
+      .replace(/(?:above|over|se zyada|se jyada)\s*\d+/, '')
+      .replace(/rs\.?|rupees|₹/g, '').trim();
+    return { text, minPrice, maxPrice };
+  }
+
+  function getFiltered(){
+    const { text, minPrice, maxPrice } = parseQuery(searchQuery);
+    let list = products.filter(p=>{
+      if(activeCategory !== 'All' && p.category !== activeCategory) return false;
+      if(minPrice != null && p.price < minPrice) return false;
+      if(maxPrice != null && p.price > maxPrice) return false;
+      if(text){
+        const hay = (p.name + ' ' + p.category).toLowerCase();
+        const words = text.split(/\s+/).filter(Boolean);
+        for(const w of words){ if(!hay.includes(w)) return false; }
+      }
+      return true;
+    });
+    if(sortBy === 'priceLow') list = list.slice().sort((a,b)=>a.price-b.price);
+    if(sortBy === 'priceHigh') list = list.slice().sort((a,b)=>b.price-a.price);
+    return list;
+  }
+
+  function buildWhatsAppMessage(list) {
+    if (!list || !list.length) return '';
+    if (list.length === 1) {
+      const p = list[0];
+      let msg = `*${p.name}*\nCategory: ${p.category}\nPrice: ₹${p.price.toLocaleString('en-IN')}`;
+      if (p.image) {
+        msg += `\nImage: ${p.image}`;
+      }
+      return msg;
+    }
+
+    let msg = `*Rangrezz Studio - Product Details (${list.length} items)*\n\n`;
+    list.forEach((p, idx) => {
+      msg += `${idx + 1}. *${p.name}*\n   Category: ${p.category}\n   Price: ₹${p.price.toLocaleString('en-IN')}`;
+      if (p.image) {
+        msg += `\n   Image: ${p.image}`;
+      }
+      msg += `\n\n`;
+    });
+    return msg.trim();
+  }
+
+  async function shareProducts(list){
+    if (!list || !list.length) return;
+
+    const withImages = list.filter(p => p.image);
+    let files = [];
+    if (withImages.length) {
+      try {
+        files = await Promise.all(withImages.slice(0, 10).map(async p => {
+          const res = await fetch(p.image);
+          const blob = await res.blob();
+          const ext = blob.type.split('/')[1] || 'jpg';
+          return new File([blob], `${p.name}.${ext}`, { type: blob.type });
+        }));
+      } catch (err) {
+        console.error("Image download error:", err);
+        files = [];
+      }
+    }
+
+    if (files.length && navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({
+          files: files
+        });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    const textMsg = buildWhatsAppMessage(list);
+    window.location.href = "whatsapp://send?text=" + encodeURIComponent(textMsg);
+  }
+  window.shareProducts = shareProducts;
+
+  function getImageDetails(url){
+    return new Promise((resolve, reject) => {
+      fetch(url)
+        .then(res => res.blob())
+        .then(blob => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result;
+            const img = new Image();
+            img.onload = () => resolve({ dataUrl, width: img.width, height: img.height, type: blob.type.includes('png') ? 'PNG' : 'JPEG' });
+            img.onerror = reject;
+            img.src = dataUrl;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        })
+        .catch(reject);
+    });
+  }
+
+  function drawPlaceholder(doc, x, y, w, h, category){
+    const [g1] = getColors(category);
+    doc.setFillColor(g1);
+    doc.roundedRect(x, y, w, h, 3, 3, 'F');
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(13);
+    doc.setTextColor('#FFFFFF');
+    doc.text(category, x+w/2, y+h/2, { align:'center' });
+  }
+
+  async function generateCatalogPDF(list){
+    const { jsPDF } = window.jspdf;
+    let doc = null;
+
+    for(let i=0; i<list.length; i++){
+      const p = list[i];
+
+      if(p.image){
+        try{
+          const img = await getImageDetails(p.image);
+          
+          const isLandscape = img.width > img.height;
+          const pageW = isLandscape ? 130 : 100;
+          const pageH = pageW * (img.height / img.width);
+          const orientation = isLandscape ? 'landscape' : 'portrait';
+
+          if(!doc) {
+            doc = new jsPDF({ orientation: orientation, unit:'mm', format:[pageW, pageH] });
+          } else {
+            doc.addPage([pageW, pageH], orientation);
+          }
+          
+          doc.addImage(img.dataUrl, img.type, 0, 0, pageW, pageH, undefined, 'FAST');
+          continue;
+        }catch(e){ /* fallback */ }
+      }
+
+      const pageW = 100, pageH = 130;
+      if(!doc) doc = new jsPDF({ unit:'mm', format:[pageW, pageH] });
+      else doc.addPage([pageW, pageH]);
+      drawPlaceholder(doc, 8, 8, pageW-16, pageH-50, p.category);
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor('#222222');
+      doc.text(p.name, 8, pageH-32, { maxWidth: pageW-16 });
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor('#999999');
+      doc.text(p.category, 8, pageH-24);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor('#B5862F');
+      doc.text('Rs. ' + p.price.toLocaleString('en-IN'), 8, pageH-12);
+    }
+    return doc.output('blob');
+  }
+
+  async function sendAsPDF(list){
+    if(!list.length) return;
+    const btn = document.getElementById('sendPdfBtn');
+    const label = document.getElementById('pdfBtnLabel');
+    btn.disabled = true; 
+    label.textContent = 'PDF..';
+    
+    try{
+      const blob = await generateCatalogPDF(list);
+      const stamp = new Date().toISOString().replace(/[-:T]/g,'').slice(0,14);
+      const filename = `rangrezz-catalog-${stamp}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      
+      label.textContent = 'Done';
+    }catch(err){
+      alert('PDF banane mein dikkat aayi, dobara try karein.');
+      console.error(err);
+      label.textContent = 'PDF';
+    }
+    
+    btn.disabled = false;
+    
+    setTimeout(()=>{ 
+      label.textContent = 'PDF'; 
+    }, 2500);
+  }
+
+  function toggleSelect(id){
+    if(selected.has(id)) selected.delete(id); else selected.add(id);
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if(card){
+      card.classList.toggle('selected', selected.has(id));
+      card.querySelector('.select-box').classList.toggle('checked', selected.has(id));
+    }
+    renderSelectionBar();
+  }
+  window.toggleSelect = toggleSelect;
+
+  function renderSelectionBar(){
+    const bar = document.getElementById('selectionBar');
+    if(selected.size === 0){ bar.classList.remove('show'); return; }
+    bar.classList.add('show');
+    document.getElementById('selCount').textContent = `${selected.size} item${selected.size>1?'s':''} selected`;
+  }
+
+  const MASTER_CATS = ['All', 'SAREE', 'KURTI', 'SINGLE KURTI', 'LEHENGA', '3 PIECE', '2 PIECE', 'DUPATTA', 'BLOUSE'];
+
+  function renderChips(){
+    const wrap = document.getElementById('catChips');
+    const loadedCats = products.map(p=>p.category);
+    const cats = Array.from(new Set([...MASTER_CATS, ...loadedCats]));
+    wrap.innerHTML = cats.map(c=>
+      `<button class="cat-chip ${c===activeCategory?'active':''}" data-cat="${c}">${c}</button>`
+    ).join('');
+    wrap.querySelectorAll('.cat-chip').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        activeCategory = btn.dataset.cat;
+        visibleCount = PAGE_SIZE;
+        render();
+        checkAndFetchMore();
+      });
+    });
+  }
+
+  function checkAndFetchMore(){
+    const filtered = getFiltered();
+    if(filtered.length === 0 && hasMoreFromFirestore && window.loadMoreFromFirestore){
+      window.loadMoreFromFirestore();
+    }
+  }
+
+  function cardHTML(p){
+    const [g1,g2] = getColors(p.category);
+    const imageInner = p.image
+      ? `<img src="${p.image}" alt="${p.name}" loading="lazy" decoding="async" onload="this.classList.add('loaded')">`
+      : `<span>${p.category}</span>`;
+    const isSel = selected.has(p.id);
+    return `
+      <div class="card ${isSel?'selected':''}" data-id="${p.id}">
+        <div class="swatch" style="--g1:${g1};--g2:${g2}" onclick="toggleSelect('${p.id}')">
+          <div class="select-box ${isSel?'checked':''}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1B0E14" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          ${imageInner}
+        </div>
+        <div class="card-body">
+          <div class="cat-tag">${p.category}</div>
+          <div class="card-name">${p.name}</div>
+          <div class="card-price">₹${p.price.toLocaleString('en-IN')}</div>
+        </div>
+      </div>`;
+  }
+
+  function toggleSelectAll(){
+    const filtered = getFiltered();
+    const visible = filtered.slice(0, visibleCount);
+    
+    // Check karo ki screen par dikh rahe saare items selected hain ya nahi
+    const allVisibleSelected = visible.length > 0 && visible.every(p => selected.has(p.id));
+    
+    if(allVisibleSelected){
+      visible.forEach(p => selected.delete(p.id));
+    } else {
+      visible.forEach(p => selected.add(p.id));
+    }
+    render();
+  }
+
+  function render(){
+    renderChips();
+    const filtered = getFiltered();
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('emptyState');
+    const countText = document.getElementById('countText');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const loadMoreWrap = document.getElementById('loadMoreWrap');
+
+    const visible = filtered.slice(0, visibleCount);
+
+    // Screen par jitne dikh rahe hain (e.g. 12) vs total loaded (e.g. 81)
+    countText.textContent = `${visible.length} items`;
+    
+    const allVisibleSelected = visible.length > 0 && visible.every(p => selected.has(p.id));
+    selectAllBtn.textContent = allVisibleSelected ? 'Deselect Visible' : `Select All`;
+    selectAllBtn.style.display = filtered.length ? 'inline-block' : 'none';
+
+    if(filtered.length === 0){
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      empty.innerHTML = productsLoaded
+        ? '<strong>Koi item nahi mila</strong>Price range badha ke ya category badal ke dekhein.'
+        : '<strong>Catalog load ho raha hai…</strong>Ek pal ruko.';
+      loadMoreWrap.style.display = 'none';
+      return;
+    }
+    
+    empty.style.display = 'none';
+    grid.innerHTML = visible.map(cardHTML).join('');
+
+    const canShowMoreLocal = visibleCount < filtered.length;
+    loadMoreWrap.style.display = (canShowMoreLocal || hasMoreFromFirestore) ? 'block' : 'none';
+    renderSelectionBar();
+  }
+
+  // SEARCH INPUT AND CLEAR BUTTON LOGIC
+  const searchInput = document.getElementById('searchInput');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+  searchInput.addEventListener('input', (e)=>{
+    searchQuery = e.target.value;
+    clearSearchBtn.style.display = searchQuery.length > 0 ? 'block' : 'none';
+    visibleCount = PAGE_SIZE; 
+    render();
+    checkAndFetchMore();
+  });
+
+  clearSearchBtn.addEventListener('click', ()=>{
+    searchInput.value = '';
+    searchQuery = '';
+    clearSearchBtn.style.display = 'none';
+    visibleCount = PAGE_SIZE;
+    render();
+  });
+
+  document.getElementById('sortBy').addEventListener('change', (e)=>{ sortBy = e.target.value; render(); });
+
+  document.getElementById('loadMoreBtn').addEventListener('click', ()=>{
+    const filtered = getFiltered();
+    if(visibleCount < filtered.length){
+      visibleCount += PAGE_SIZE;
+      render();
+    } else if(window.loadMoreFromFirestore){
+      window.loadMoreFromFirestore();
+    }
+  });
+
+  document.getElementById('selectAllBtn').addEventListener('click', toggleSelectAll);
+  
+  document.querySelectorAll('.try-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      searchQuery = chip.dataset.q;
+      searchInput.value = searchQuery;
+      clearSearchBtn.style.display = 'block';
+      visibleCount = PAGE_SIZE; 
+      render();
+      checkAndFetchMore();
+    });
+  });
+
+  document.getElementById('clearSelBtn').addEventListener('click', ()=>{ selected.clear(); render(); });
+  document.getElementById('sendSelectedBtn').addEventListener('click', ()=>{
+    const list = products.filter(p=>selected.has(p.id));
+    if(list.length) shareProducts(list);
+  });
+  document.getElementById('sendPdfBtn').addEventListener('click', ()=>{
+    const list = products.filter(p=>selected.has(p.id));
+    if(list.length) sendAsPDF(list);
+  });
+
+  render();
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, query, orderBy, limit, startAfter, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBKdlUqXFF2rK0yZChhuzQRgfL_Tan4wRM",
+    authDomain: "rangrezz-catalog.firebaseapp.com",
+    projectId: "rangrezz-catalog",
+    storageBucket: "rangrezz-catalog.firebasestorage.app",
+    messagingSenderId: "490614934526",
+    appId: "1:490614934526:web:bdd039027821b363928eaf"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let lastDoc = null;
+  let isLoading = false;
+  const FETCH_LIMIT = 25;
+
+  async function loadInitialProducts() {
+    try {
+      const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(FETCH_LIMIT));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+        const products = snapshot.docs
+          .filter(docSnap => docSnap.data().isDeleted !== true)
+          .map(docSnap => {
+            const d = docSnap.data();
+            return {
+              id: docSnap.id,
+              name: d.name || '',
+              category: d.category || '',
+              price: d.price || 0,
+              image: d.image || ''
+            };
+          });
+
+        const hasMore = snapshot.docs.length === FETCH_LIMIT;
+        window.setProducts(products, hasMore);
+      } else {
+        window.setProducts([], false);
+      }
+    } catch (error) {
+      console.error("Firestore Error:", error);
+      window.setProducts([], false);
+    }
+  }
+
+  window.loadMoreFromFirestore = async function() {
+    if (isLoading || !lastDoc) return;
+    isLoading = true;
+
+    const btn = document.getElementById('loadMoreBtn');
+    if (btn) btn.textContent = 'Loading...';
+
+    try {
+      const q = query(
+        collection(db, "products"),
+        orderBy("createdAt", "desc"),
+        startAfter(lastDoc),
+        limit(FETCH_LIMIT)
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+        const newProducts = snapshot.docs
+          .filter(docSnap => docSnap.data().isDeleted !== true)
+          .map(docSnap => {
+            const d = docSnap.data();
+            return {
+              id: docSnap.id,
+              name: d.name || '',
+              category: d.category || '',
+              price: d.price || 0,
+              image: d.image || ''
+            };
+          });
+
+        const hasMore = snapshot.docs.length === FETCH_LIMIT;
+        window.appendProducts(newProducts, hasMore);
+      } else {
+        window.updateHasMore(false);
+      }
+    } catch (error) {
+      console.error("Load More Error:", error);
+    } finally {
+      isLoading = false;
+      if (btn) btn.textContent = 'Load more';
+    }
+  };
+
+  loadInitialProducts();
+</script>
+</body>
+</html>
