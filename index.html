@@ -19,7 +19,14 @@
     --line: rgba(245,233,221,0.14);
     --whatsapp:#3FA772;
   }
-  *{box-sizing:border-box;}
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
+  *{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
   body{
     margin:0;
     background:
@@ -44,7 +51,6 @@
   .search-row input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
   .search-row input::placeholder{ color:var(--ivory-dim); opacity:.65; }
 
-  /* SEARCH CROSS BUTTON */
   .clear-search-btn{
     position:absolute;
     right:14px;
@@ -65,17 +71,17 @@
   .try-chip{ font-size:12.5px; color:var(--ivory-dim); background:transparent; border:1px dashed var(--line); border-radius:999px; padding:6px 12px; cursor:pointer; font-family:'Manrope',sans-serif; }
   .try-chip:hover{ border-color:var(--gold); color:var(--gold); }
 
-  .filter-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top:20px; }
+  .filter-row{ margin-top:20px; }
   .cat-chips{ display:flex; gap:8px; flex-wrap:wrap; }
   .cat-chip{ font-family:'Manrope',sans-serif; font-size:13px; font-weight:600; padding:8px 15px; border-radius:999px; border:1.5px dashed var(--gold); background:transparent; color:var(--ivory); cursor:pointer; }
   .cat-chip.active{ background:var(--gold); color:#211016; border-style:solid; }
-  select#sortBy{ background:var(--bg-elevated); color:var(--ivory); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-family:'Manrope',sans-serif; font-size:13px; }
 
-  .count-row{ max-width:1080px; margin:16px auto 0; padding:0 20px; font-size:13px; color:var(--ivory-dim); display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  .select-all-btn{ background:transparent; border:1px dashed var(--gold); color:var(--gold); border-radius:999px; padding:5px 12px; font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .sub-controls-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  select#sortBy{ background:var(--bg-elevated); color:var(--ivory); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-family:'Manrope',sans-serif; font-size:13px; }
+  .select-all-btn{ background:transparent; border:1px dashed var(--gold); color:var(--gold); border-radius:999px; padding:6px 14px; font-family:'Manrope',sans-serif; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
   .select-all-btn:hover{ background:var(--gold); color:#211016; }
 
-  .grid{ max-width:1080px; margin:14px auto 0; padding:0 20px 40px; display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:18px; }
+  .grid{ max-width:1080px; margin:20px auto 0; padding:0 20px 40px; display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:18px; }
   .card{ background:var(--bg-card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:outline .15s ease; }
   .card.selected{ outline:2px solid var(--gold); outline-offset:-1px; }
 
@@ -122,8 +128,7 @@
 
   @media (max-width:480px){
     .grid{ grid-template-columns:repeat(2, 1fr); gap:12px; }
-    .filter-row{ flex-direction:column; align-items:stretch; }
-    select#sortBy{ width:100%; }
+    select#sortBy{ width:auto; }
   }
 </style>
 </head>
@@ -141,26 +146,28 @@
     <input id="searchInput" type="text" placeholder="Try: saree under 1500, kurti above 400...">
     <button id="clearSearchBtn" class="clear-search-btn" title="Clear search">&times;</button>
   </div>
+  
   <div class="try-row">
-    <button class="try-chip" data-q="saree under 1000">saree under 1000</button>
-    <button class="try-chip" data-q="kurti under 400">kurti under 400</button>
-    <button class="try-chip" data-q="lehenga above 3000">lehenga above 3000</button>
-    <button class="try-chip" data-q="dupatta under 300">dupatta under 300</button>
+    <button class="try-chip" data-q="lehenga under 1000">lehenga under 1000</button>
+    <button class="try-chip" data-q="silk saree under 300">silk saree under 300</button>
+    <button class="try-chip" data-q="3 piece above 400">3 piece above 400</button>
+    <button class="try-chip" data-q="blouse under 200">blouse under 200</button>
   </div>
+  
   <div class="filter-row">
     <div class="cat-chips" id="catChips"></div>
+  </div>
+
+  <div class="sub-controls-row">
     <select id="sortBy">
-      <option value="relevance">Sort: Relevance</option>
+      <option value="relevance">Sort: Latest</option>
       <option value="priceLow">Price: Low to High</option>
       <option value="priceHigh">Price: High to Low</option>
     </select>
+    <button class="select-all-btn" id="selectAllBtn">Select All</button>
   </div>
 </div>
 
-<div class="count-row">
-  <span id="countText"></span>
-  <button class="select-all-btn" id="selectAllBtn">Select All</button>
-</div>
 <div class="grid" id="grid"></div>
 <div id="emptyState" style="display:none" class="empty">
   <strong>Koi item nahi mila</strong>
@@ -195,6 +202,14 @@
   const PAGE_SIZE = 12;
   let visibleCount = PAGE_SIZE;
   let selected = new Set();
+  let selectedMap = new Map();
+  let dynamicCategories = [];
+  let hasStarted = false;
+
+  window.setCategories = function(cats){
+    dynamicCategories = [...cats];
+    renderChips();
+  };
 
   window.setProducts = function(data, hasMore = true){
     productsLoaded = true;
@@ -219,13 +234,13 @@
   };
 
   const CAT_COLORS = {
-    'SAREE':['#7A1E3C','#D4A657'], 'KURTI':['#1F5C52','#6FBFAE'], 'SINGLE KURTI':['#1F5C52','#6FBFAE'],
+    'SAREE':['#7A1E3C','#D4A657'], 'SILK SAREE':['#6E1F40','#D4A657'], 'KURTI':['#1F5C52','#6FBFAE'], 'SINGLE KURTI':['#1F5C52','#6FBFAE'],
     'LEHENGA':['#8E2A5B','#E8B4C4'], '3 PIECE':['#7A4A1E','#E8873A'], '2 PIECE':['#7A4A1E','#E8873A'],
     'DUPATTA':['#4A2E6E','#B48CD9'], 'BLOUSE':['#6E1F1F','#C9622F']
   };
   function getColors(cat){ return CAT_COLORS[cat] || ['#4A4A52','#7A7A85']; }
 
-  let activeCategory = 'All';
+  let activeCategory = null;
   let searchQuery = '';
   let sortBy = 'relevance';
 
@@ -249,7 +264,6 @@
   function getFiltered(){
     const { text, minPrice, maxPrice } = parseQuery(searchQuery);
     let list = products.filter(p=>{
-      if(activeCategory !== 'All' && p.category !== activeCategory) return false;
       if(minPrice != null && p.price < minPrice) return false;
       if(maxPrice != null && p.price > maxPrice) return false;
       if(text){
@@ -264,82 +278,49 @@
     return list;
   }
 
-  function buildWhatsAppMessage(list) {
-    if (!list || !list.length) return '';
-    if (list.length === 1) {
-      const p = list[0];
-      let msg = `*${p.name}*\nCategory: ${p.category}\nPrice: ₹${p.price.toLocaleString('en-IN')}`;
-      if (p.image) {
-        msg += `\nImage: ${p.image}`;
-      }
-      return msg;
-    }
-
-    let msg = `*Rangrezz Studio - Product Details (${list.length} items)*\n\n`;
-    list.forEach((p, idx) => {
-      msg += `${idx + 1}. *${p.name}*\n   Category: ${p.category}\n   Price: ₹${p.price.toLocaleString('en-IN')}`;
-      if (p.image) {
-        msg += `\n   Image: ${p.image}`;
-      }
-      msg += `\n\n`;
-    });
-    return msg.trim();
-  }
-
   async function shareProducts(list){
     if (!list || !list.length) return;
 
     const withImages = list.filter(p => p.image);
-    let files = [];
-    if (withImages.length) {
-      try {
-        files = await Promise.all(withImages.slice(0, 10).map(async p => {
-          const res = await fetch(p.image);
-          const blob = await res.blob();
-          const ext = blob.type.split('/')[1] || 'jpg';
-          return new File([blob], `${p.name}.${ext}`, { type: blob.type });
-        }));
-      } catch (err) {
-        console.error("Image download error:", err);
-        files = [];
-      }
-    }
+    if (!withImages.length) return;
 
-    if (files.length && navigator.canShare && navigator.canShare({ files })) {
-      try {
-        await navigator.share({
-          files: files
-        });
+    try {
+      const files = await Promise.all(withImages.map(async p => {
+        const res = await fetch(p.image);
+        const blob = await res.blob();
+        return new File([blob], `${p.name}.jpg`, { type: 'image/jpeg' });
+      }));
+
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files });
         return;
-      } catch (err) {
-        if (err.name === 'AbortError') return;
       }
+    } catch (err) {
+      console.log("Native share not available/failed, falling back to gallery download.", err);
     }
 
-    const textMsg = buildWhatsAppMessage(list);
-    window.location.href = "whatsapp://send?text=" + encodeURIComponent(textMsg);
+    alert("Ye images seedhe share nahi ho payin. Hum unhe gallery mein download kar rahe hain — wahan se WhatsApp khol kar select karke bhej dein.");
+
+    for (let i = 0; i < withImages.length; i++) {
+      const p = withImages[i];
+      try {
+        const res = await fetch(p.image);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${p.name || 'product'}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        await new Promise(r => setTimeout(r, 200));
+      } catch (e) {
+        console.error("Download error for:", p.name);
+      }
+    }
   }
   window.shareProducts = shareProducts;
-
-  function getImageDetails(url){
-    return new Promise((resolve, reject) => {
-      fetch(url)
-        .then(res => res.blob())
-        .then(blob => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const dataUrl = reader.result;
-            const img = new Image();
-            img.onload = () => resolve({ dataUrl, width: img.width, height: img.height, type: blob.type.includes('png') ? 'PNG' : 'JPEG' });
-            img.onerror = reject;
-            img.src = dataUrl;
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        })
-        .catch(reject);
-    });
-  }
 
   function drawPlaceholder(doc, x, y, w, h, category){
     const [g1] = getColors(category);
@@ -357,37 +338,58 @@
 
     for(let i=0; i<list.length; i++){
       const p = list[i];
+      let addedImage = false;
 
       if(p.image){
         try{
-          const img = await getImageDetails(p.image);
-          
-          const isLandscape = img.width > img.height;
+          const imgData = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 800;
+              const scale = Math.min(MAX_WIDTH / img.width, 1);
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              resolve({
+                dataUrl: canvas.toDataURL('image/jpeg', 0.8),
+                width: canvas.width,
+                height: canvas.height
+              });
+            };
+            img.onerror = reject;
+            img.src = p.image;
+          });
+
+          const isLandscape = imgData.width > imgData.height;
           const pageW = isLandscape ? 130 : 100;
-          const pageH = pageW * (img.height / img.width);
+          const pageH = pageW * (imgData.height / imgData.width);
           const orientation = isLandscape ? 'landscape' : 'portrait';
 
-          if(!doc) {
-            doc = new jsPDF({ orientation: orientation, unit:'mm', format:[pageW, pageH] });
-          } else {
-            doc.addPage([pageW, pageH], orientation);
-          }
+          if(!doc) doc = new jsPDF({ orientation: orientation, unit:'mm', format:[pageW, pageH] });
+          else doc.addPage([pageW, pageH], orientation);
           
-          doc.addImage(img.dataUrl, img.type, 0, 0, pageW, pageH, undefined, 'FAST');
-          continue;
-        }catch(e){ /* fallback */ }
+          doc.addImage(imgData.dataUrl, 'JPEG', 0, 0, pageW, pageH, undefined, 'FAST');
+          addedImage = true;
+        }catch(err){
+          console.error("PDF Image error:", err);
+        }
       }
 
-      const pageW = 100, pageH = 130;
-      if(!doc) doc = new jsPDF({ unit:'mm', format:[pageW, pageH] });
-      else doc.addPage([pageW, pageH]);
-      drawPlaceholder(doc, 8, 8, pageW-16, pageH-50, p.category);
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor('#222222');
-      doc.text(p.name, 8, pageH-32, { maxWidth: pageW-16 });
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor('#999999');
-      doc.text(p.category, 8, pageH-24);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor('#B5862F');
-      doc.text('Rs. ' + p.price.toLocaleString('en-IN'), 8, pageH-12);
+      if(!addedImage){
+        const pageW = 100, pageH = 130;
+        if(!doc) doc = new jsPDF({ unit:'mm', format:[pageW, pageH] });
+        else doc.addPage([pageW, pageH]);
+        drawPlaceholder(doc, 8, 8, pageW-16, pageH-50, p.category);
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor('#222222');
+        doc.text(p.name, 8, pageH-32, { maxWidth: pageW-16 });
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor('#999999');
+        doc.text(p.category, 8, pageH-24);
+        doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor('#B5862F');
+        doc.text('Rs. ' + p.price.toLocaleString('en-IN'), 8, pageH-12);
+      }
     }
     return doc.output('blob');
   }
@@ -408,29 +410,43 @@
       a.href = url; a.download = filename;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
-      
       label.textContent = 'Done';
     }catch(err){
       alert('PDF banane mein dikkat aayi, dobara try karein.');
       console.error(err);
       label.textContent = 'PDF';
     }
-    
     btn.disabled = false;
-    
-    setTimeout(()=>{ 
-      label.textContent = 'PDF'; 
-    }, 2500);
+    setTimeout(()=>{ label.textContent = 'PDF'; }, 2500);
   }
 
   function toggleSelect(id){
-    if(selected.has(id)) selected.delete(id); else selected.add(id);
-    const card = document.querySelector(`.card[data-id="${id}"]`);
-    if(card){
-      card.classList.toggle('selected', selected.has(id));
-      card.querySelector('.select-box').classList.toggle('checked', selected.has(id));
+    let product = products.find(p => p.id === id);
+    
+    if(!product){
+      const card = document.querySelector(`.card[data-id="${id}"]`);
+      if(card){
+        product = {
+          id: id,
+          name: card.querySelector('.card-name')?.textContent || '',
+          category: card.querySelector('.cat-tag')?.textContent || '',
+          price: parseFloat(card.querySelector('.card-price')?.textContent.replace(/[^\d.]/g, '')) || 0,
+          image: card.querySelector('img')?.src || ''
+        };
+      }
     }
+
+    if(selected.has(id)){
+      selected.delete(id);
+      selectedMap.delete(id);
+    } else {
+      selected.add(id);
+      if(product) selectedMap.set(id, product);
+    }
+
+    updateCardSelectionUI(id);
     renderSelectionBar();
+    updateSelectAllButtonText();
   }
   window.toggleSelect = toggleSelect;
 
@@ -441,33 +457,52 @@
     document.getElementById('selCount').textContent = `${selected.size} item${selected.size>1?'s':''} selected`;
   }
 
-// Hardcoded array ke bajaye dynamic array
-let dynamicCategories = ['All'];
+  function updateCardSelectionUI(id){
+    const card = document.querySelector(`.card[data-id="${CSS.escape(String(id))}"]`);
+    if(!card) return;
+    const isSel = selected.has(id);
+    card.classList.toggle('selected', isSel);
+    const box = card.querySelector('.select-box');
+    if(box) box.classList.toggle('checked', isSel);
+  }
 
-function renderChips(){
-  const wrap = document.getElementById('catChips');
-  const loadedCats = products.map(p => p.category);
-  // Admin se aayi categories aur loaded products ki categories combine hongi
-  const cats = Array.from(new Set([...dynamicCategories, ...loadedCats]));
-  
-  wrap.innerHTML = cats.map(c =>
-    `<button class="cat-chip ${c === activeCategory ? 'active' : ''}" data-cat="${c}">${c}</button>`
-  ).join('');
-  
-  wrap.querySelectorAll('.cat-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeCategory = btn.dataset.cat;
-      visibleCount = PAGE_SIZE;
-      render();
-      checkAndFetchMore();
-    });
-  });
-}
-  function checkAndFetchMore(){
+  function updateSelectAllButtonText(){
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    if(!selectAllBtn) return;
     const filtered = getFiltered();
-    if(filtered.length === 0 && hasMoreFromFirestore && window.loadMoreFromFirestore){
-      window.loadMoreFromFirestore();
-    }
+    const visible = filtered.slice(0, visibleCount);
+    const allSelected = visible.length > 0 && visible.every(p=>selected.has(p.id));
+    selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
+    selectAllBtn.style.display = filtered.length ? 'inline-block' : 'none';
+  }
+
+  function renderChips(){
+    const wrap = document.getElementById('catChips');
+    const loadedCats = products.map(p => p.category);
+    const cats = Array.from(new Set([...dynamicCategories, ...loadedCats]));
+
+    wrap.innerHTML = cats.map(c=>
+      `<button class="cat-chip ${c===activeCategory?'active':''}" data-cat="${c}">${c}</button>`
+    ).join('');
+
+    wrap.querySelectorAll('.cat-chip').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const selectedCat = btn.dataset.cat;
+        if(activeCategory === selectedCat) return;
+        activeCategory = selectedCat;
+        hasStarted = true;
+        visibleCount = PAGE_SIZE;
+        sortBy = 'priceLow';
+        const sortSelect = document.getElementById('sortBy');
+        if(sortSelect) sortSelect.value = 'priceLow';
+
+        if (window.fetchCategoryProducts) {
+          window.fetchCategoryProducts(activeCategory);
+        } else {
+          render();
+        }
+      });
+    });
   }
 
   function cardHTML(p){
@@ -478,7 +513,7 @@ function renderChips(){
     const isSel = selected.has(p.id);
     return `
       <div class="card ${isSel?'selected':''}" data-id="${p.id}">
-        <div class="swatch" style="--g1:${g1};--g2:${g2}" onclick="toggleSelect('${p.id}')">
+        <div class="swatch" style="--g1:${g1};--g2:${g2}">
           <div class="select-box ${isSel?'checked':''}">
             <svg viewBox="0 0 24 24" fill="none" stroke="#1B0E14" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
           </div>
@@ -495,16 +530,20 @@ function renderChips(){
   function toggleSelectAll(){
     const filtered = getFiltered();
     const visible = filtered.slice(0, visibleCount);
-    
-    // Check karo ki screen par dikh rahe saare items selected hain ya nahi
-    const allVisibleSelected = visible.length > 0 && visible.every(p => selected.has(p.id));
-    
-    if(allVisibleSelected){
-      visible.forEach(p => selected.delete(p.id));
-    } else {
-      visible.forEach(p => selected.add(p.id));
-    }
-    render();
+    const allSelected = visible.length > 0 && visible.every(p=>selected.has(p.id));
+
+    visible.forEach(p=> {
+      if(allSelected){
+        selected.delete(p.id);
+        selectedMap.delete(p.id);
+      } else {
+        selected.add(p.id);
+        selectedMap.set(p.id, p);
+      }
+      updateCardSelectionUI(p.id);
+    });
+    renderSelectionBar();
+    updateSelectAllButtonText();
   }
 
   function render(){
@@ -512,29 +551,28 @@ function renderChips(){
     const filtered = getFiltered();
     const grid = document.getElementById('grid');
     const empty = document.getElementById('emptyState');
-    const countText = document.getElementById('countText');
     const selectAllBtn = document.getElementById('selectAllBtn');
     const loadMoreWrap = document.getElementById('loadMoreWrap');
 
     const visible = filtered.slice(0, visibleCount);
+    const allSelected = visible.length > 0 && visible.every(p=>selected.has(p.id));
 
-    // Screen par jitne dikh rahe hain (e.g. 12) vs total loaded (e.g. 81)
-    countText.textContent = `${visible.length} items`;
-    
-    const allVisibleSelected = visible.length > 0 && visible.every(p => selected.has(p.id));
-    selectAllBtn.textContent = allVisibleSelected ? 'Deselect Visible' : `Select All`;
+    selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
     selectAllBtn.style.display = filtered.length ? 'inline-block' : 'none';
 
     if(filtered.length === 0){
       grid.innerHTML = '';
       empty.style.display = 'block';
-      empty.innerHTML = productsLoaded
-        ? '<strong>Koi item nahi mila</strong>Price range badha ke ya category badal ke dekhein.'
-        : '<strong>Catalog load ho raha hai…</strong>Ek pal ruko.';
+      if(!hasStarted){
+        empty.innerHTML = '<strong>Category chuno ya search karo</strong>Images sirf tabhi load honge jab aap upar se koi category select karenge ya search karenge.';
+      } else {
+        empty.innerHTML = productsLoaded
+          ? '<strong>Koi item nahi mila</strong>Price range badha ke ya category badal ke dekhein.'
+          : '<strong>Catalog load ho raha hai…</strong>Ek pal ruko.';
+      }
       loadMoreWrap.style.display = 'none';
       return;
     }
-    
     empty.style.display = 'none';
     grid.innerHTML = visible.map(cardHTML).join('');
 
@@ -543,24 +581,50 @@ function renderChips(){
     renderSelectionBar();
   }
 
-  // SEARCH INPUT AND CLEAR BUTTON LOGIC
   const searchInput = document.getElementById('searchInput');
   const clearSearchBtn = document.getElementById('clearSearchBtn');
 
-  searchInput.addEventListener('input', (e)=>{
-    searchQuery = e.target.value;
+  function handleSearchTrigger(qText){
+    searchQuery = qText;
     clearSearchBtn.style.display = searchQuery.length > 0 ? 'block' : 'none';
-    visibleCount = PAGE_SIZE; 
+    visibleCount = PAGE_SIZE;
+
+    const qLower = searchQuery.toLowerCase().trim();
+    if(qLower){
+      const sortedCats = [...dynamicCategories].sort((a,b) => b.length - a.length);
+      let matchedCat = sortedCats.find(c => qLower.includes(c.toLowerCase()));
+
+      if (matchedCat && activeCategory !== matchedCat) {
+        activeCategory = matchedCat;
+        hasStarted = true;
+        sortBy = 'priceLow';
+        const sortSelect = document.getElementById('sortBy');
+        if(sortSelect) sortSelect.value = 'priceLow';
+        if (window.fetchCategoryProducts) {
+          window.fetchCategoryProducts(matchedCat);
+          return;
+        }
+      } else if (!hasStarted && window.fetchCategoryProducts) {
+        hasStarted = true;
+        activeCategory = 'All';
+        window.fetchCategoryProducts('All');
+        return;
+      }
+    }
     render();
-    checkAndFetchMore();
+  }
+
+  let searchDebounceTimer = null;
+  searchInput.addEventListener('input', (e)=>{
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      handleSearchTrigger(e.target.value);
+    }, 250);
   });
 
   clearSearchBtn.addEventListener('click', ()=>{
     searchInput.value = '';
-    searchQuery = '';
-    clearSearchBtn.style.display = 'none';
-    visibleCount = PAGE_SIZE;
-    render();
+    handleSearchTrigger('');
   });
 
   document.getElementById('sortBy').addEventListener('change', (e)=>{ sortBy = e.target.value; render(); });
@@ -577,24 +641,35 @@ function renderChips(){
 
   document.getElementById('selectAllBtn').addEventListener('click', toggleSelectAll);
   
+  document.getElementById('grid').addEventListener('click', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    const id = card.dataset.id;
+    if (id) toggleSelect(id);
+  });
+  
   document.querySelectorAll('.try-chip').forEach(chip=>{
     chip.addEventListener('click', ()=>{
-      searchQuery = chip.dataset.q;
-      searchInput.value = searchQuery;
-      clearSearchBtn.style.display = 'block';
-      visibleCount = PAGE_SIZE; 
-      render();
-      checkAndFetchMore();
+      const val = chip.dataset.q;
+      searchInput.value = val;
+      handleSearchTrigger(val);
     });
   });
 
-  document.getElementById('clearSelBtn').addEventListener('click', ()=>{ selected.clear(); render(); });
+  document.getElementById('clearSelBtn').addEventListener('click', ()=>{
+    const ids = Array.from(selected);
+    selected.clear();
+    selectedMap.clear();
+    ids.forEach(id => updateCardSelectionUI(id));
+    renderSelectionBar();
+    updateSelectAllButtonText();
+  });
   document.getElementById('sendSelectedBtn').addEventListener('click', ()=>{
-    const list = products.filter(p=>selected.has(p.id));
+    const list = Array.from(selectedMap.values());
     if(list.length) shareProducts(list);
   });
   document.getElementById('sendPdfBtn').addEventListener('click', ()=>{
-    const list = products.filter(p=>selected.has(p.id));
+    const list = Array.from(selectedMap.values());
     if(list.length) sendAsPDF(list);
   });
 
@@ -603,7 +678,7 @@ function renderChips(){
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, query, orderBy, limit, startAfter, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, enableIndexedDbPersistence, collection, query, where, orderBy, limit, startAfter, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBKdlUqXFF2rK0yZChhuzQRgfL_Tan4wRM",
@@ -617,83 +692,75 @@ function renderChips(){
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Firestore se Admin ki live categories fetch karne ke liye logic
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.log("Persistence failed: Multiple tabs open.");
+    } else if (err.code === 'unimplemented') {
+      console.log("Persistence unavailable on this browser.");
+    }
+  });
+
+  let lastDoc = null;
+  let isLoading = false;
+  let currentCategory = 'All';
+  const FETCH_LIMIT = 25;
+
   async function loadCategoriesFromFirestore() {
     try {
       const snap = await getDocs(collection(db, "categories"));
       if (!snap.empty) {
         const catNames = snap.docs.map(doc => doc.data().name).filter(Boolean);
         catNames.sort((a, b) => a.localeCompare(b));
-        dynamicCategories = ['All', ...catNames];
-        renderChips();
+        window.setCategories(catNames);
       }
     } catch (err) {
       console.error("Category fetch error:", err);
     }
   }
 
-  let lastDoc = null;
-  let isLoading = false;
-  const FETCH_LIMIT = 25;
-
-  async function loadInitialProducts() {
-    // Categories bhi load karein
-    await loadCategoriesFromFirestore();
-
-    try {
-      const q = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(FETCH_LIMIT));
-      const snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        lastDoc = snapshot.docs[snapshot.docs.length - 1];
-
-        const products = snapshot.docs
-          .filter(docSnap => docSnap.data().isDeleted !== true)
-          .map(docSnap => {
-            const d = docSnap.data();
-            return {
-              id: docSnap.id,
-              name: d.name || '',
-              category: d.category || '',
-              price: d.price || 0,
-              image: d.image || ''
-            };
-          });
-
-        const hasMore = snapshot.docs.length === FETCH_LIMIT;
-        window.setProducts(products, hasMore);
-      } else {
-        window.setProducts([], false);
-      }
-    } catch (error) {
-      console.error("Firestore Error:", error);
-      window.setProducts([], false);
-    }
-  }
-
-  // Baaki LoadMore ka logic as-is rahega...
-</script>
-
-  window.loadMoreFromFirestore = async function() {
-    if (isLoading || !lastDoc) return;
+  async function fetchProductsFromFirestore(category = 'All', isLoadMore = false) {
+    if (isLoading) return;
     isLoading = true;
 
+    if (!isLoadMore) {
+      lastDoc = null;
+      currentCategory = category;
+      window.setProducts([], true);
+    }
+
     const btn = document.getElementById('loadMoreBtn');
-    if (btn) btn.textContent = 'Loading...';
+    if (btn && isLoadMore) btn.textContent = 'Loading...';
 
     try {
-      const q = query(
-        collection(db, "products"),
-        orderBy("createdAt", "desc"),
-        startAfter(lastDoc),
-        limit(FETCH_LIMIT)
-      );
-      const snapshot = await getDocs(q);
+      let constraints = [];
+      if (category !== 'All') {
+        constraints.push(where("category", "==", category));
+      }
+      constraints.push(orderBy("createdAt", "desc"));
+
+      if (isLoadMore && lastDoc) {
+        constraints.push(startAfter(lastDoc));
+      }
+      constraints.push(limit(FETCH_LIMIT));
+
+      let snapshot;
+      try {
+        const q = query(collection(db, "products"), ...constraints);
+        snapshot = await getDocs(q);
+      } catch (indexErr) {
+        let fallbackConstraints = [];
+        if (category !== 'All') fallbackConstraints.push(where("category", "==", category));
+        if (isLoadMore && lastDoc) fallbackConstraints.push(startAfter(lastDoc));
+        fallbackConstraints.push(limit(FETCH_LIMIT));
+
+        const qFallback = query(collection(db, "products"), ...fallbackConstraints);
+        snapshot = await getDocs(qFallback);
+      }
 
       if (!snapshot.empty) {
         lastDoc = snapshot.docs[snapshot.docs.length - 1];
 
-        const newProducts = snapshot.docs
+        const fetchedProducts = snapshot.docs
           .filter(docSnap => docSnap.data().isDeleted !== true)
           .map(docSnap => {
             const d = docSnap.data();
@@ -707,19 +774,33 @@ function renderChips(){
           });
 
         const hasMore = snapshot.docs.length === FETCH_LIMIT;
-        window.appendProducts(newProducts, hasMore);
+        if (isLoadMore) {
+          window.appendProducts(fetchedProducts, hasMore);
+        } else {
+          window.setProducts(fetchedProducts, hasMore);
+        }
       } else {
-        window.updateHasMore(false);
+        if (isLoadMore) window.updateHasMore(false);
+        else window.setProducts([], false);
       }
     } catch (error) {
-      console.error("Load More Error:", error);
+      console.error("Firestore Fetch Error:", error);
+      if (!isLoadMore) window.setProducts([], false);
     } finally {
       isLoading = false;
       if (btn) btn.textContent = 'Load more';
     }
+  }
+
+  window.fetchCategoryProducts = function(cat) {
+    fetchProductsFromFirestore(cat, false);
   };
 
-  loadInitialProducts();
+  window.loadMoreFromFirestore = function() {
+    fetchProductsFromFirestore(currentCategory, true);
+  };
+
+  loadCategoriesFromFirestore();
 </script>
 </body>
 </html>
