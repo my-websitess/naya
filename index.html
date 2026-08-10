@@ -17,7 +17,7 @@
     --marigold:#E8873A;
     --blush:#E8B4C4;
     --line: rgba(245,233,221,0.14);
-    --whatsapp:#3FA772;
+    --gallery-btn:#2E8B57;
   }
   html {
     overflow-y: scroll;
@@ -118,8 +118,8 @@
   .selection-bar .actions{ display:flex; gap:10px; }
   .clear-btn{ background:transparent; border:1px solid var(--line); color:var(--ivory-dim); padding:10px 16px; border-radius:999px; font-family:'Manrope',sans-serif; font-size:13px; cursor:pointer; }
   
-  .send-sel-btn{ background:transparent; border:1.5px solid var(--whatsapp); color:var(--whatsapp); border-radius:999px; padding:10px 16px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
-  .send-sel-btn svg{ width:15px; height:15px; }
+  .send-sel-btn{ background:transparent; border:1.5px solid var(--gallery-btn); color:var(--gallery-btn); border-radius:999px; padding:10px 16px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
+  .send-sel-btn svg{ width:16px; height:16px; }
   .pdf-btn{ background:var(--gold); color:#211016; border:none; border-radius:999px; padding:10px 18px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
   .pdf-btn svg{ width:15px; height:15px; }
   .pdf-btn:disabled{ opacity:.6; cursor:wait; }
@@ -135,9 +135,9 @@
 <body>
 
 <header>
-  <div class="eyebrow">WhatsApp Catalog</div>
+  <div class="eyebrow">Rangrezz Catalog</div>
   <h1> Rangrezz <em>Studio</em></h1>
-  <p class="tagline">Select karo, share karo — kisi ko bhi, seedha WhatsApp par.</p>
+  <p class="tagline">Select karo aur high-quality photos seedhe Gallery me save karo.</p>
 </header>
 
 <div class="controls">
@@ -184,8 +184,8 @@
   <div class="actions">
     <button class="clear-btn" id="clearSelBtn">Clear</button>
     <button class="send-sel-btn" id="sendSelectedBtn">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.9.53 3.68 1.44 5.2L2 22l4.94-1.4A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3.06.87.85-2.98-.2-.32A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>
-      Photo
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+      Gallery
     </button>
     <button class="pdf-btn" id="sendPdfBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -278,33 +278,17 @@
     return list;
   }
 
-  async function shareProducts(list){
+  // Direct Gallery Download Logic (Low Bandwidth Browsing -> High-Res Download)
+  async function downloadToGallery(list){
     if (!list || !list.length) return;
+    const items = list.filter(p => p.image || p.thumbnail);
+    if (!items.length) return;
 
-    const withImages = list.filter(p => p.image);
-    if (!withImages.length) return;
-
-    try {
-      const files = await Promise.all(withImages.map(async p => {
-        const res = await fetch(p.image);
-        const blob = await res.blob();
-        return new File([blob], `${p.name}.jpg`, { type: 'image/jpeg' });
-      }));
-
-      if (navigator.canShare && navigator.canShare({ files })) {
-        await navigator.share({ files });
-        return;
-      }
-    } catch (err) {
-      console.log("Native share not available/failed, falling back to gallery download.", err);
-    }
-
-    alert("Ye images seedhe share nahi ho payin. Hum unhe gallery mein download kar rahe hain — wahan se WhatsApp khol kar select karke bhej dein.");
-
-    for (let i = 0; i < withImages.length; i++) {
-      const p = withImages[i];
+    for (let i = 0; i < items.length; i++) {
+      const p = items[i];
+      const targetUrl = p.image || p.thumbnail; // Download Real High-Res image
       try {
-        const res = await fetch(p.image);
+        const res = await fetch(targetUrl);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -314,13 +298,13 @@
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 250));
       } catch (e) {
-        console.error("Download error for:", p.name);
+        console.error("Gallery download error for:", p.name, e);
       }
     }
   }
-  window.shareProducts = shareProducts;
+  window.downloadToGallery = downloadToGallery;
 
   function drawPlaceholder(doc, x, y, w, h, category){
     const [g1] = getColors(category);
@@ -339,8 +323,9 @@
     for(let i=0; i<list.length; i++){
       const p = list[i];
       let addedImage = false;
+      const targetUrl = p.image || p.thumbnail;
 
-      if(p.image){
+      if(targetUrl){
         try{
           const imgData = await new Promise((resolve, reject) => {
             const img = new Image();
@@ -360,7 +345,7 @@
               });
             };
             img.onerror = reject;
-            img.src = p.image;
+            img.src = targetUrl;
           });
 
           const isLandscape = imgData.width > imgData.height;
@@ -431,7 +416,8 @@
           name: card.querySelector('.card-name')?.textContent || '',
           category: card.querySelector('.cat-tag')?.textContent || '',
           price: parseFloat(card.querySelector('.card-price')?.textContent.replace(/[^\d.]/g, '')) || 0,
-          image: card.querySelector('img')?.src || ''
+          thumbnail: card.querySelector('img')?.src || '',
+          image: card.querySelector('img')?.dataset.fullImage || card.querySelector('img')?.src || ''
         };
       }
     }
@@ -507,8 +493,10 @@
 
   function cardHTML(p){
     const [g1,g2] = getColors(p.category);
-    const imageInner = p.image
-      ? `<img src="${p.image}" alt="${p.name}" loading="lazy" decoding="async" onload="this.classList.add('loaded')">`
+    const displayImg = p.thumbnail || p.image; // Display low-res thumbnail
+    const realImg = p.image || p.thumbnail;    // Real image stored in data-attr
+    const imageInner = displayImg
+      ? `<img src="${displayImg}" data-full-image="${realImg}" alt="${p.name}" loading="lazy" decoding="async" onload="this.classList.add('loaded')">`
       : `<span>${p.category}</span>`;
     const isSel = selected.has(p.id);
     return `
@@ -666,7 +654,7 @@
   });
   document.getElementById('sendSelectedBtn').addEventListener('click', ()=>{
     const list = Array.from(selectedMap.values());
-    if(list.length) shareProducts(list);
+    if(list.length) downloadToGallery(list);
   });
   document.getElementById('sendPdfBtn').addEventListener('click', ()=>{
     const list = Array.from(selectedMap.values());
@@ -769,7 +757,8 @@
               name: d.name || '',
               category: d.category || '',
               price: d.price || 0,
-              image: d.image || ''
+              thumbnail: d.thumbnail || d.image || '', // Thumbnail for Web App Grid
+              image: d.image || d.thumbnail || ''      // Real High-Res image for Download
             };
           });
 
