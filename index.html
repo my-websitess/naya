@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rangrezz Studio — Catalog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://rangrezz-new-catalog.b-cdn.net">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -18,15 +20,10 @@
     --blush:#E8B4C4;
     --line: rgba(245,233,221,0.14);
     --gallery-btn:#2E8B57;
+    --error:#E8735A;
   }
-  html {
-    overflow-y: scroll;
-    scrollbar-gutter: stable;
-  }
-  *{
-    box-sizing:border-box;
-    -webkit-tap-highlight-color: transparent;
-  }
+  html{ overflow-y:scroll; scrollbar-gutter:stable; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body{
     margin:0;
     background:
@@ -44,27 +41,19 @@
   h1 em{ color:var(--marigold); font-style:italic; }
   .tagline{ color:var(--ivory-dim); font-size:15px; max-width:440px; margin:0 auto; }
 
-  .controls{ max-width:1080px; margin:28px auto 0; padding:0 20px; }
+  .status-banner{ max-width:1080px; margin:16px auto 0; padding:0 20px; }
+  .status-banner .inner{ display:none; align-items:center; justify-content:space-between; gap:10px; background:rgba(232,115,90,0.12); border:1px solid var(--error); color:#F7D9D0; border-radius:12px; padding:11px 14px; font-size:13px; }
+  .status-banner .inner.show{ display:flex; }
+  .status-banner button{ background:transparent; border:1px solid var(--error); color:#F7D9D0; border-radius:999px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; font-family:'Manrope',sans-serif; }
+
+  .controls{ max-width:1080px; margin:20px auto 0; padding:0 20px; }
   .search-row{ position:relative; }
   .search-row svg{ position:absolute; left:16px; top:50%; transform:translateY(-50%); width:18px; height:18px; stroke:var(--ivory-dim); }
   .search-row input{ width:100%; padding:15px 42px 15px 46px; background:var(--bg-elevated); border:1px solid var(--line); border-radius:14px; color:var(--ivory); font-family:'Manrope', sans-serif; font-size:15px; }
   .search-row input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
   .search-row input::placeholder{ color:var(--ivory-dim); opacity:.65; }
 
-  .clear-search-btn{
-    position:absolute;
-    right:14px;
-    top:50%;
-    transform:translateY(-50%);
-    background:none;
-    border:none;
-    color:var(--ivory-dim);
-    font-size:20px;
-    cursor:pointer;
-    display:none;
-    padding:4px;
-    line-height:1;
-  }
+  .clear-search-btn{ position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--ivory-dim); font-size:20px; cursor:pointer; display:none; padding:4px; line-height:1; }
   .clear-search-btn:hover{ color:var(--gold); }
 
   .try-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
@@ -75,6 +64,7 @@
   .cat-chips{ display:flex; gap:8px; flex-wrap:wrap; }
   .cat-chip{ font-family:'Manrope',sans-serif; font-size:13px; font-weight:600; padding:8px 15px; border-radius:999px; border:1.5px dashed var(--gold); background:transparent; color:var(--ivory); cursor:pointer; }
   .cat-chip.active{ background:var(--gold); color:#211016; border-style:solid; }
+  .cat-chip-skel{ width:70px; height:33px; border-radius:999px; background:var(--bg-elevated); border:1px solid var(--line); animation:pulse 1.4s ease-in-out infinite; }
 
   .sub-controls-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:16px; flex-wrap:wrap; }
   select#sortBy{ background:var(--bg-elevated); color:var(--ivory); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-family:'Manrope',sans-serif; font-size:13px; }
@@ -88,7 +78,7 @@
   .swatch{ position:relative; height:150px; display:flex; align-items:flex-end; padding:12px; overflow:hidden; cursor:pointer;
     background-image: radial-gradient(circle, rgba(255,255,255,0.25) 1px, transparent 1.4px), linear-gradient(135deg, var(--g1), var(--g2));
     background-size: 14px 14px, cover; }
-  .swatch img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; opacity:0; transition:opacity .35s ease; }
+  .swatch img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; opacity:0; transition:opacity .3s ease; }
   .swatch img.loaded{ opacity:1; }
   .swatch::after{ content:""; position:absolute; left:0; right:0; bottom:-1px; height:12px; z-index:2; background:var(--bg-card);
     clip-path: polygon(0% 0%,4% 100%,8% 0%,12% 100%,16% 0%,20% 100%,24% 0%,28% 100%,32% 0%,36% 100%,40% 0%,44% 100%,48% 0%,52% 100%,56% 0%,60% 100%,64% 0%,68% 100%,72% 0%,76% 100%,80% 0%,84% 100%,88% 0%,92% 100%,96% 0%,100% 100%,100% 0%); }
@@ -104,6 +94,11 @@
   .card-name{ font-size:14.5px; font-weight:600; line-height:1.3; }
   .card-price{ font-family:'Fraunces', serif; font-weight:700; font-size:19px; color:var(--gold); margin-top:auto; }
 
+  /* Skeleton loading cards */
+  .card-skel .swatch{ background:linear-gradient(135deg,#3a2230,#2a1520); }
+  .skel-line{ background:var(--bg-elevated); border-radius:5px; height:11px; animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:.55; } 50%{ opacity:1; } }
+
   .empty{ max-width:1080px; margin:30px auto; padding:40px 20px; text-align:center; color:var(--ivory-dim); }
   .empty strong{ display:block; color:var(--ivory); font-family:'Fraunces',serif; font-size:20px; margin-bottom:6px; }
 
@@ -117,35 +112,35 @@
   .selection-bar .count{ font-weight:700; font-family:'Fraunces',serif; font-size:15px; }
   .selection-bar .actions{ display:flex; gap:10px; }
   .clear-btn{ background:transparent; border:1px solid var(--line); color:var(--ivory-dim); padding:10px 16px; border-radius:999px; font-family:'Manrope',sans-serif; font-size:13px; cursor:pointer; }
-  
-  .send-sel-btn{ background:transparent; border:1.5px solid var(--gallery-btn); color:var(--gallery-btn); border-radius:999px; padding:10px 16px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
+
+  .send-sel-btn{ background:transparent; border:1.5px solid var(--gallery-btn); color:var(--gallery-btn); border-radius:999px; padding:10px 16px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
   .send-sel-btn:disabled{ opacity:.6; cursor:wait; }
   .send-sel-btn svg{ width:16px; height:16px; }
-  .pdf-btn{ background:var(--gold); color:#211016; border:none; border-radius:999px; padding:10px 18px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space: nowrap; flex-shrink: 0; }
+  .pdf-btn{ background:var(--gold); color:#211016; border:none; border-radius:999px; padding:10px 18px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
   .pdf-btn svg{ width:15px; height:15px; }
   .pdf-btn:disabled{ opacity:.6; cursor:wait; }
 
   footer{ text-align:center; padding:24px 20px 40px; color:var(--ivory-dim); font-size:12px; border-top:1px solid var(--line); }
 
-  /* Batch Download Modal Styling */
-  #batchModal {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95);
-    z-index: 9999; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
-  }
-  #batchModal h2 { color: var(--gold); margin-top: 0; font-family: 'Fraunces', serif; }
-  #batchModal p { color: var(--ivory-dim); text-align: center; max-width: 400px; font-size: 14px; margin-bottom: 20px; }
-  #batchProgress { color: white; font-size: 18px; font-weight: bold; margin-bottom: 25px; }
-  #batchNextBtn { background: var(--gold); color: #111; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 999px; cursor: pointer; width: 100%; max-width: 300px; transition: transform 0.1s; }
-  #batchNextBtn:active { transform: scale(0.96); }
-  #batchCloseBtn { margin-top: 20px; background: none; border: none; color: var(--ivory-dim); font-size: 16px; cursor: pointer; text-decoration: underline; }
+  #batchModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:9999; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+  #batchModal h2{ color:var(--gold); margin-top:0; font-family:'Fraunces', serif; }
+  #batchModal p{ color:var(--ivory-dim); text-align:center; max-width:400px; font-size:14px; margin-bottom:20px; }
+  #batchProgress{ color:white; font-size:18px; font-weight:bold; margin-bottom:25px; }
+  #batchNextBtn{ background:var(--gold); color:#111; border:none; padding:15px 40px; font-size:18px; font-weight:bold; border-radius:999px; cursor:pointer; width:100%; max-width:300px; transition:transform 0.1s; }
+  #batchNextBtn:active{ transform:scale(0.96); }
+  #batchNextBtn:disabled{ opacity:.6; cursor:wait; }
+  #batchCloseBtn{ margin-top:20px; background:none; border:none; color:var(--ivory-dim); font-size:16px; cursor:pointer; text-decoration:underline; }
 
   @media (max-width:480px){
     .grid{ grid-template-columns:repeat(2, 1fr); gap:12px; }
     select#sortBy{ width:auto; }
-    .selection-bar{ flex-wrap: wrap; padding: 12px 14px; gap: 8px; }
-    .selection-bar .count{ flex: 1 1 100%; font-size: 13px; }
-    .selection-bar .actions{ flex: 1 1 100%; gap: 8px; }
-    .clear-btn, .send-sel-btn, .pdf-btn{ flex: 1 1 auto; padding: 10px 10px; font-size: 12px; justify-content: center; }
+    .selection-bar{ flex-wrap:wrap; padding:12px 14px; gap:8px; }
+    .selection-bar .count{ flex:1 1 100%; font-size:13px; }
+    .selection-bar .actions{ flex:1 1 100%; gap:8px; }
+    .clear-btn, .send-sel-btn, .pdf-btn{ flex:1 1 auto; padding:10px 10px; font-size:12px; justify-content:center; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .cat-chip-skel, .skel-line{ animation:none; }
   }
 </style>
 </head>
@@ -157,22 +152,29 @@
   <p class="tagline">Select karo aur high-quality photos seedhe Gallery me save karo.</p>
 </header>
 
+<div class="status-banner">
+  <div class="inner" id="statusBanner">
+    <span id="statusText">Kuch gadbad ho gayi.</span>
+    <button id="statusRetryBtn">Retry</button>
+  </div>
+</div>
+
 <div class="controls">
   <div class="search-row">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
     <input id="searchInput" type="text" placeholder="Try: saree under 1500, kurti above 400...">
     <button id="clearSearchBtn" class="clear-search-btn" title="Clear search">&times;</button>
   </div>
-  
+
   <div class="try-row">
     <button class="try-chip" data-q="lehenga under 1000">lehenga under 1000</button>
     <button class="try-chip" data-q="silk saree under 300">silk saree under 300</button>
     <button class="try-chip" data-q="3 piece above 400">3 piece above 400</button>
     <button class="try-chip" data-q="blouse under 200">blouse under 200</button>
   </div>
-  
+
   <div class="filter-row">
-    <div class="cat-chips" id="catChips"></div>
+    <div class="cat-chips" id="catChips"><div class="cat-chip-skel"></div><div class="cat-chip-skel"></div><div class="cat-chip-skel"></div></div>
   </div>
 
   <div class="sub-controls-row">
@@ -181,16 +183,16 @@
       <option value="priceLow">Price: Low to High</option>
       <option value="priceHigh">Price: High to Low</option>
     </select>
-    <button class="select-all-btn" id="selectAllBtn">Select All</button>
+    <button class="select-all-btn" id="selectAllBtn" style="display:none">Select All</button>
   </div>
 </div>
 
 <div class="grid" id="grid"></div>
 <div id="emptyState" style="display:none" class="empty">
-  <strong>Koi item nahi mila</strong>
-  Price range badha ke ya category badal ke dekhein.
+  <strong>Category chuno ya search karo</strong>
+  Images sirf tabhi load honge jab aap upar se koi category select karenge ya search karenge.
 </div>
-<div class="load-more-wrap" id="loadMoreWrap">
+<div class="load-more-wrap" id="loadMoreWrap" style="display:none">
   <button id="loadMoreBtn">Load more</button>
 </div>
 
@@ -211,7 +213,6 @@
   </div>
 </div>
 
-<!-- Batch Download Modal (Groups of 10) -->
 <div id="batchModal">
   <h2>Batch Share Mode</h2>
   <p>Browser security blocks sending too many files at once. We've grouped your images to make sharing faster.</p>
@@ -222,725 +223,701 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<script>
-  let products = [];
-  let productsLoaded = false;
-  let hasMoreFromFirestore = true;
-  const PAGE_SIZE = 12;
-  let visibleCount = PAGE_SIZE;
-  let selected = new Set();
-  let selectedMap = new Map();
-  let dynamicCategories = [];
-  let hasStarted = false;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  collection, query, where, limit, startAfter, getDocs
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-  window.setCategories = function(cats){
-    dynamicCategories = [...cats];
+/* ---------------------------------------------------------------
+   FIREBASE SETUP
+--------------------------------------------------------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyB8ydTYbhm5o04xu3uWLj53MEW31aoxs6w",
+  authDomain: "rangrezz-new-catalog.firebaseapp.com",
+  projectId: "rangrezz-new-catalog",
+  storageBucket: "rangrezz-new-catalog.firebasestorage.app",
+  messagingSenderId: "618132160742",
+  appId: "1:618132160742:web:0e3e921498259cbaec3b27"
+};
+
+const app = initializeApp(firebaseConfig);
+
+// Offline cache so repeat visits + weak connections still show something instantly.
+let db;
+try{
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
+  });
+}catch(e){
+  // initializeFirestore throws if already called (e.g. hot reload) — fall back gracefully.
+  const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js");
+  db = getFirestore(app);
+}
+
+const BUNNY_HOST = "rangrezz-new-catalog.b-cdn.net";
+const FETCH_LIMIT = 24;
+const PAGE_SIZE = 12;
+
+/* Bunny.net can resize/compress on the fly via query params (Optimizer add-on).
+   Grid thumbnails ask for a small width; if Optimizer isn't enabled on the
+   pull zone, Bunny just ignores the params and serves the original — safe either way. */
+function thumbUrl(url, width){
+  if(!url) return "";
+  try{
+    const u = new URL(url);
+    if(u.hostname === BUNNY_HOST){
+      u.searchParams.set("width", String(width));
+      u.searchParams.set("quality", "72");
+      return u.toString();
+    }
+  }catch(e){ /* not a valid absolute URL, use as-is */ }
+  return url;
+}
+
+/* Used for Gallery-share and PDF export — still much lighter than the
+   original upload, but sharper than the grid thumbnail (width ~900px,
+   78% quality) since these are the copies people actually keep/print. */
+function mediumUrl(url, width = 900){
+  if(!url) return "";
+  try{
+    const u = new URL(url);
+    if(u.hostname === BUNNY_HOST){
+      u.searchParams.set("width", String(width));
+      u.searchParams.set("quality", "78");
+      return u.toString();
+    }
+  }catch(e){ /* not a valid absolute URL, use as-is */ }
+  return url;
+}
+
+/* ---------------------------------------------------------------
+   APP STATE
+--------------------------------------------------------------- */
+const state = {
+  categories: [],
+  categoriesLoaded: false,
+  products: [],
+  productsLoaded: false,
+  hasMoreRemote: true,
+  lastDoc: null,
+  activeCategory: null, // no default — a real category must be picked before any read happens
+  searchQuery: "",
+  sortBy: "relevance",
+  visibleCount: PAGE_SIZE,
+  selected: new Map(), // id -> product snapshot
+  isFetching: false,
+  hasStarted: false // true only once user taps a category or searches — keeps Firestore reads down
+};
+
+const CAT_COLORS = {
+  "SAREE":["#7A1E3C","#D4A657"], "SILK SAREE":["#6E1F40","#D4A657"], "KURTI":["#1F5C52","#6FBFAE"], "SINGLE KURTI":["#1F5C52","#6FBFAE"],
+  "LEHENGA":["#8E2A5B","#E8B4C4"], "3 PIECE":["#7A4A1E","#E8873A"], "2 PIECE":["#7A4A1E","#E8873A"],
+  "DUPATTA":["#4A2E6E","#B48CD9"], "BLOUSE":["#6E1F1F","#C9622F"]
+};
+function getColors(cat){ return CAT_COLORS[(cat||"").toUpperCase()] || ["#4A4A52","#7A7A85"]; }
+
+/* ---------------------------------------------------------------
+   DOM REFS
+--------------------------------------------------------------- */
+const $ = (id) => document.getElementById(id);
+const grid = $("grid");
+const emptyState = $("emptyState");
+const loadMoreWrap = $("loadMoreWrap");
+const loadMoreBtn = $("loadMoreBtn");
+const catChips = $("catChips");
+const selectAllBtn = $("selectAllBtn");
+const searchInput = $("searchInput");
+const clearSearchBtn = $("clearSearchBtn");
+const sortSelect = $("sortBy");
+const statusBanner = $("statusBanner");
+const statusText = $("statusText");
+const statusRetryBtn = $("statusRetryBtn");
+
+/* ---------------------------------------------------------------
+   STATUS / ERROR BANNER (so failures are visible, not silent)
+--------------------------------------------------------------- */
+let retryFn = null;
+function showStatus(msg, onRetry){
+  statusText.textContent = msg;
+  retryFn = onRetry || null;
+  statusRetryBtn.style.display = onRetry ? "inline-block" : "none";
+  statusBanner.classList.add("show");
+}
+function hideStatus(){ statusBanner.classList.remove("show"); }
+statusRetryBtn.addEventListener("click", () => { hideStatus(); if(retryFn) retryFn(); });
+
+/* ---------------------------------------------------------------
+   FIRESTORE FETCHING
+--------------------------------------------------------------- */
+async function loadCategories(){
+  const cached = localStorage.getItem("rangrezz_categories_v1");
+  if(cached){
+    try{ state.categories = JSON.parse(cached); renderChips(); }catch(e){}
+  }
+  try{
+    const snap = await getDocs(collection(db, "categories"));
+    const names = snap.docs.map(d => d.data().name).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+    if(names.length){
+      state.categories = names;
+      localStorage.setItem("rangrezz_categories_v1", JSON.stringify(names));
+    }
+  }catch(err){
+    console.error("Category fetch error:", err);
+    if(!state.categories.length) showStatus("Categories load nahi ho payi. Internet check karo.", loadCategories);
+  }finally{
+    state.categoriesLoaded = true;
     renderChips();
-  };
+  }
+}
 
-  window.setProducts = function(data, hasMore = true){
-    productsLoaded = true;
-    products = data;
-    hasMoreFromFirestore = hasMore;
-    visibleCount = PAGE_SIZE;
+async function fetchProducts({ category = state.activeCategory, loadMore = false } = {}){
+  if(!category) return; // never fetch without a specific, user-picked category
+  if(state.isFetching) return;
+  state.isFetching = true;
+
+  if(!loadMore){
+    state.lastDoc = null;
+    state.activeCategory = category;
+    state.products = [];
+    state.productsLoaded = false;
+    state.visibleCount = PAGE_SIZE;
     render();
-  };
-
-  window.appendProducts = function(newProducts, hasMore = true){
-    const existingIds = new Set(products.map(p => p.id));
-    const uniqueNew = newProducts.filter(p => !existingIds.has(p.id));
-    products = [...products, ...uniqueNew];
-    hasMoreFromFirestore = hasMore;
-    visibleCount = products.length;
-    render();
-  };
-
-  window.updateHasMore = function(hasMore){
-    hasMoreFromFirestore = hasMore;
-    render();
-  };
-
-  const CAT_COLORS = {
-    'SAREE':['#7A1E3C','#D4A657'], 'SILK SAREE':['#6E1F40','#D4A657'], 'KURTI':['#1F5C52','#6FBFAE'], 'SINGLE KURTI':['#1F5C52','#6FBFAE'],
-    'LEHENGA':['#8E2A5B','#E8B4C4'], '3 PIECE':['#7A4A1E','#E8873A'], '2 PIECE':['#7A4A1E','#E8873A'],
-    'DUPATTA':['#4A2E6E','#B48CD9'], 'BLOUSE':['#6E1F1F','#C9622F']
-  };
-  function getColors(cat){ return CAT_COLORS[cat] || ['#4A4A52','#7A7A85']; }
-
-  let activeCategory = null;
-  let searchQuery = '';
-  let sortBy = 'relevance';
-
-  function parseQuery(q){
-    q = q.toLowerCase().trim();
-    let minPrice = null, maxPrice = null;
-    const between = q.match(/between\s*(\d+)\s*(?:and|to|-)\s*(\d+)/);
-    const under = q.match(/(?:under|below|se kam)\s*(\d+)/);
-    const above = q.match(/(?:above|over|se zyada|se jyada)\s*(\d+)/);
-    if(between){ minPrice = parseInt(between[1]); maxPrice = parseInt(between[2]); }
-    if(under){ maxPrice = parseInt(under[1]); }
-    if(above){ minPrice = parseInt(above[1]); }
-    let text = q
-      .replace(/between\s*\d+\s*(?:and|to|-)\s*\d+/, '')
-      .replace(/(?:under|below|se kam)\s*\d+/, '')
-      .replace(/(?:above|over|se zyada|se jyada)\s*\d+/, '')
-      .replace(/rs\.?|rupees|₹/g, '').trim();
-    return { text, minPrice, maxPrice };
+  }else{
+    loadMoreBtn.textContent = "Loading...";
+    loadMoreBtn.disabled = true;
   }
 
-  function getFiltered(){
-    const { text, minPrice, maxPrice } = parseQuery(searchQuery);
-    let list = products.filter(p=>{
-      if(minPrice != null && p.price < minPrice) return false;
-      if(maxPrice != null && p.price > maxPrice) return false;
-      if(text){
-        const hay = (p.name + ' ' + p.category).toLowerCase();
-        const words = text.split(/\s+/).filter(Boolean);
-        for(const w of words){ if(!hay.includes(w)) return false; }
-      }
-      return true;
-    });
-    if(sortBy === 'priceLow') list = list.slice().sort((a,b)=>a.price-b.price);
-    if(sortBy === 'priceHigh') list = list.slice().sort((a,b)=>b.price-a.price);
-    return list;
+  try{
+    // Always filter by a specific category, never orderBy alongside it —
+    // where() + orderBy() together would need a Firestore composite index.
+    // Results are sorted client-side (price low-to-high) right after anyway.
+    const constraints = [ where("category", "==", category) ];
+    if(loadMore && state.lastDoc) constraints.push(startAfter(state.lastDoc));
+    constraints.push(limit(FETCH_LIMIT));
+
+    const snap = await getDocs(query(collection(db, "products"), ...constraints));
+
+    if(!snap.empty){
+      state.lastDoc = snap.docs[snap.docs.length - 1];
+      const fetched = snap.docs
+        .filter(d => d.data().isDeleted !== true)
+        .map(d => {
+          const v = d.data();
+          const fullImage = v.image || v.thumbnail || "";
+          return {
+            id: d.id,
+            name: v.name || "",
+            category: v.category || "",
+            price: Number(v.price) || 0,
+            image: fullImage,
+            thumb: thumbUrl(fullImage, 400)
+          };
+        });
+      const existingIds = new Set(state.products.map(p => p.id));
+      const uniqueNew = fetched.filter(p => !existingIds.has(p.id));
+      state.products = loadMore ? [...state.products, ...uniqueNew] : fetched;
+      state.hasMoreRemote = snap.docs.length === FETCH_LIMIT;
+      state.visibleCount = state.products.length;
+    }else{
+      state.hasMoreRemote = false;
+      if(!loadMore) state.products = [];
+    }
+    state.productsLoaded = true;
+    hideStatus();
+  }catch(err){
+    console.error("Firestore fetch error:", err);
+    state.productsLoaded = true;
+    const isIndexErr = String(err && err.message || "").toLowerCase().includes("index");
+    showStatus(
+      isIndexErr
+        ? "Firestore index missing hai is category ke liye. Firebase console me index banao (error console me link milega)."
+        : "Products load nahi ho paye. Internet check karke retry karo.",
+      () => fetchProducts({ category: state.activeCategory, loadMore })
+    );
+  }finally{
+    state.isFetching = false;
+    loadMoreBtn.disabled = false;
+    loadMoreBtn.textContent = "Load more";
+    render();
   }
+}
 
-  // --- BATCH GALLERY DOWNLOAD LOGIC ---
-  let batchQueue = [];
-  let currentBatchIndex = 0;
+/* ---------------------------------------------------------------
+   SEARCH PARSING ("under 1500", "above 400", "between 200 and 600")
+--------------------------------------------------------------- */
+function parseQuery(q){
+  q = q.toLowerCase().trim();
+  let minPrice = null, maxPrice = null;
+  const between = q.match(/between\s*(\d+)\s*(?:and|to|-)\s*(\d+)/);
+  const under = q.match(/(?:under|below|se kam)\s*(\d+)/);
+  const above = q.match(/(?:above|over|se zyada|se jyada)\s*(\d+)/);
+  if(between){ minPrice = parseInt(between[1]); maxPrice = parseInt(between[2]); }
+  if(under){ maxPrice = parseInt(under[1]); }
+  if(above){ minPrice = parseInt(above[1]); }
+  const text = q
+    .replace(/between\s*\d+\s*(?:and|to|-)\s*\d+/, "")
+    .replace(/(?:under|below|se kam)\s*\d+/, "")
+    .replace(/(?:above|over|se zyada|se jyada)\s*\d+/, "")
+    .replace(/rs\.?|rupees|₹/g, "").trim();
+  return { text, minPrice, maxPrice };
+}
 
-  async function downloadToGallery(list) {
-    if (!list || !list.length) return;
-    const items = list.filter(p => p.image || p.thumbnail);
-    if (!items.length) return;
-
-    const btn = document.getElementById('sendSelectedBtn');
-    const label = document.getElementById('gallerySendLabel');
-    btn.disabled = true;
-    label.textContent = 'Preparing..';
-
-    // Break items into chunks of 10
-    batchQueue = [];
-    for (let i = 0; i < items.length; i += 10) {
-      batchQueue.push(items.slice(i, i + 10));
-    }
-
-    currentBatchIndex = 0;
-
-    if (batchQueue.length === 1) {
-      // If only 1 batch (1-10 items), process it directly without modal
-      await processBatch(batchQueue[0], 0);
-      btn.disabled = false;
-      label.textContent = 'Gallery';
-    } else {
-      // Multiple batches, show the batch modal
-      label.textContent = 'Gallery';
-      btn.disabled = false;
-      updateBatchModal();
-      document.getElementById('batchModal').style.display = 'flex';
-    }
-  }
-
-  window.downloadToGallery = downloadToGallery;
-
-  async function processBatch(batchItems, startIndexOffset) {
-    // Fetch all images for this batch
-    const fetched = await Promise.all(batchItems.map(async (p, i) => {
-      const targetUrl = p.image || p.thumbnail;
-      try {
-        const res = await fetch(targetUrl);
-        if (!res.ok) throw new Error('Fetch failed');
-        const blob = await res.blob();
-        const baseName = (p.name || `product-${startIndexOffset + i + 1}`).replace(/[\\/:*?"<>|]/g, '').trim();
-        const file = new File([blob], `${baseName}.jpg`, { type: blob.type || 'image/jpeg' });
-        return { ok: true, file };
-      } catch (e) {
-        console.error("Fetch error for:", p.name, e);
-        return { ok: false };
-      }
-    }));
-
-    const files = fetched.filter(f => f.ok).map(f => f.file);
-    if (!files.length) {
-      alert('Images download nahi ho payi.');
-      return false;
-    }
-
-    // Try native share tray first (since it's <= 10 items, it's safe)
-    if (navigator.canShare && navigator.canShare({ files })) {
-      try {
-        await navigator.share({ files, title: 'Rangrezz Catalog' });
-        return true; // Successfully shared
-      } catch (err) {
-        if (err.name === 'AbortError') return false; // User cancelled
-        console.warn("Share failed, falling back to download loop", err);
-      }
-    }
-
-    // Fallback: 1500ms delay loop for platforms that don't support share sheet
-    for (const file of files) {
-      const url = URL.createObjectURL(file);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      await new Promise(r => setTimeout(r, 1500));
+function getFiltered(){
+  const { text, minPrice, maxPrice } = parseQuery(state.searchQuery);
+  let list = state.products.filter(p => {
+    if(minPrice != null && p.price < minPrice) return false;
+    if(maxPrice != null && p.price > maxPrice) return false;
+    if(text){
+      const hay = (p.name + " " + p.category).toLowerCase();
+      for(const w of text.split(/\s+/).filter(Boolean)){ if(!hay.includes(w)) return false; }
     }
     return true;
+  });
+  if(state.sortBy === "priceLow") list = list.slice().sort((a,b)=>a.price-b.price);
+  if(state.sortBy === "priceHigh") list = list.slice().sort((a,b)=>b.price-a.price);
+  return list;
+}
+
+/* ---------------------------------------------------------------
+   RENDERING
+--------------------------------------------------------------- */
+function skeletonCardsHTML(n){
+  let out = "";
+  for(let i=0;i<n;i++){
+    out += `<div class="card card-skel"><div class="swatch"></div><div class="card-body">
+      <div class="skel-line" style="width:40%"></div><div class="skel-line" style="width:80%"></div><div class="skel-line" style="width:30%"></div>
+    </div></div>`;
+  }
+  return out;
+}
+
+function cardHTML(p){
+  const [g1,g2] = getColors(p.category);
+  const imageInner = p.image
+    ? `<img src="${p.thumb}" data-full-image="${p.image}" alt="${escapeAttr(p.name)}" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.remove()">`
+    : `<span>${escapeHtml(p.category)}</span>`;
+  const isSel = state.selected.has(p.id);
+  return `
+    <div class="card ${isSel?"selected":""}" data-id="${p.id}">
+      <div class="swatch" style="--g1:${g1};--g2:${g2}">
+        <div class="select-box ${isSel?"checked":""}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1B0E14" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        ${imageInner}
+      </div>
+      <div class="card-body">
+        <div class="cat-tag">${escapeHtml(p.category)}</div>
+        <div class="card-name">${escapeHtml(p.name)}</div>
+        <div class="card-price">₹${p.price.toLocaleString("en-IN")}</div>
+      </div>
+    </div>`;
+}
+function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+let chipsSignature = "";
+function renderChips(){
+  const cats = Array.from(new Set(state.categories));
+  const sig = cats.join("|") + "::" + state.activeCategory;
+  if(sig === chipsSignature) return; // avoid rebuilding chips on every keystroke/render
+  chipsSignature = sig;
+
+  catChips.innerHTML = cats.map(c =>
+    `<button class="cat-chip ${c===state.activeCategory?"active":""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>`
+  ).join("");
+
+  catChips.querySelectorAll(".cat-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cat = btn.dataset.cat;
+      if(state.activeCategory === cat && state.hasStarted) return;
+      state.activeCategory = cat;
+      state.hasStarted = true;
+      state.sortBy = "priceLow";
+      sortSelect.value = "priceLow";
+      fetchProducts({ category: cat, loadMore: false });
+    });
+  });
+}
+
+function render(){
+  renderChips();
+  const filtered = getFiltered();
+  const visible = filtered.slice(0, state.visibleCount);
+  const allSelected = visible.length > 0 && visible.every(p => state.selected.has(p.id));
+
+  selectAllBtn.textContent = allSelected ? "Deselect All" : "Select All";
+  selectAllBtn.style.display = filtered.length ? "inline-block" : "none";
+
+  if(!state.hasStarted){
+    grid.innerHTML = "";
+    emptyState.style.display = "block";
+    emptyState.innerHTML = "<strong>Category chuno ya search karo</strong>Images sirf tabhi load honge jab aap upar se koi category select karenge ya search karenge.";
+    loadMoreWrap.style.display = "none";
+    return;
   }
 
-  function updateBatchModal() {
-    if (currentBatchIndex >= batchQueue.length) {
-      document.getElementById('batchModal').style.display = 'none';
-      setTimeout(() => alert("Saari images send ho gayi hain!"), 300);
-      return;
-    }
+  if(!state.productsLoaded){
+    emptyState.style.display = "none";
+    loadMoreWrap.style.display = "none";
+    grid.innerHTML = skeletonCardsHTML(8);
+    return;
+  }
 
-    const totalBatches = batchQueue.length;
-    const currentBatch = batchQueue[currentBatchIndex];
-    const startNum = (currentBatchIndex * 10) + 1;
-    const endNum = startNum + currentBatch.length - 1;
+  if(filtered.length === 0){
+    grid.innerHTML = "";
+    emptyState.style.display = "block";
+    emptyState.innerHTML = "<strong>Koi item nahi mila</strong>Price range badha ke ya category badal ke dekhein.";
+    loadMoreWrap.style.display = "none";
+    renderSelectionBar();
+    return;
+  }
 
-    document.getElementById('batchProgress').textContent = `Batch ${currentBatchIndex + 1} of ${totalBatches}`;
-    
-    const btn = document.getElementById('batchNextBtn');
-    btn.textContent = `Share Images ${startNum} to ${endNum}`;
+  emptyState.style.display = "none";
+  grid.innerHTML = visible.map(cardHTML).join("");
+
+  const canShowMoreLocal = state.visibleCount < filtered.length;
+  loadMoreWrap.style.display = (canShowMoreLocal || state.hasMoreRemote) ? "block" : "none";
+  renderSelectionBar();
+}
+
+function renderSelectionBar(){
+  const bar = $("selectionBar");
+  if(state.selected.size === 0){ bar.classList.remove("show"); return; }
+  bar.classList.add("show");
+  $("selCount").textContent = `${state.selected.size} item${state.selected.size>1?"s":""} selected`;
+}
+
+function updateCardSelectionUI(id){
+  const card = grid.querySelector(`.card[data-id="${CSS.escape(String(id))}"]`);
+  if(!card) return;
+  const isSel = state.selected.has(id);
+  card.classList.toggle("selected", isSel);
+  const box = card.querySelector(".select-box");
+  if(box) box.classList.toggle("checked", isSel);
+}
+
+/* ---------------------------------------------------------------
+   SELECTION
+--------------------------------------------------------------- */
+function toggleSelect(id){
+  const product = state.products.find(p => p.id === id);
+  if(state.selected.has(id)){
+    state.selected.delete(id);
+  }else if(product){
+    state.selected.set(id, product);
+  }
+  updateCardSelectionUI(id);
+  renderSelectionBar();
+  updateSelectAllButtonText();
+}
+
+function updateSelectAllButtonText(){
+  const filtered = getFiltered();
+  const visible = filtered.slice(0, state.visibleCount);
+  const allSelected = visible.length > 0 && visible.every(p => state.selected.has(p.id));
+  selectAllBtn.textContent = allSelected ? "Deselect All" : "Select All";
+}
+
+function toggleSelectAll(){
+  const filtered = getFiltered();
+  const visible = filtered.slice(0, state.visibleCount);
+  const allSelected = visible.length > 0 && visible.every(p => state.selected.has(p.id));
+  visible.forEach(p => {
+    if(allSelected) state.selected.delete(p.id);
+    else state.selected.set(p.id, p);
+    updateCardSelectionUI(p.id);
+  });
+  renderSelectionBar();
+  updateSelectAllButtonText();
+}
+
+/* ---------------------------------------------------------------
+   BATCH SHARE TO GALLERY (groups of 10 — browser share-sheet limit)
+--------------------------------------------------------------- */
+let batchQueue = [];
+let currentBatchIndex = 0;
+
+async function downloadToGallery(list){
+  const items = list.filter(p => p.image);
+  if(!items.length) return;
+
+  const btn = $("sendSelectedBtn");
+  const label = $("gallerySendLabel");
+  btn.disabled = true;
+  label.textContent = "Preparing..";
+
+  batchQueue = [];
+  for(let i=0;i<items.length;i+=10) batchQueue.push(items.slice(i, i+10));
+  currentBatchIndex = 0;
+
+  if(batchQueue.length === 1){
+    await processBatch(batchQueue[0]);
     btn.disabled = false;
-  }
-
-  // Handle modal Next Batch click
-  document.getElementById('batchNextBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('batchNextBtn');
-    btn.textContent = 'Processing...';
-    btn.disabled = true;
-
-    const currentBatch = batchQueue[currentBatchIndex];
-    const startNumOffset = currentBatchIndex * 10;
-    
-    await processBatch(currentBatch, startNumOffset);
-
-    currentBatchIndex++;
+    label.textContent = "Gallery";
+  }else{
+    label.textContent = "Gallery";
+    btn.disabled = false;
     updateBatchModal();
-  });
-
-  // Handle modal Close
-  document.getElementById('batchCloseBtn').addEventListener('click', () => {
-    document.getElementById('batchModal').style.display = 'none';
-  });
-  // ----------------------------------
-
-
-  function drawPlaceholder(doc, x, y, w, h, category){
-    const [g1] = getColors(category);
-    doc.setFillColor(g1);
-    doc.roundedRect(x, y, w, h, 3, 3, 'F');
-    doc.setFont('helvetica','italic');
-    doc.setFontSize(13);
-    doc.setTextColor('#FFFFFF');
-    doc.text(category, x+w/2, y+h/2, { align:'center' });
+    $("batchModal").style.display = "flex";
   }
+}
 
-  async function generateCatalogPDF(list){
-    const { jsPDF } = window.jspdf;
-    let doc = null;
-
-    for(let i=0; i<list.length; i++){
-      const p = list[i];
-      let addedImage = false;
-      const targetUrl = p.image || p.thumbnail;
-
-      if(targetUrl){
-        try{
-          const imgData = await withTimeout((async () => {
-            const res = await fetch(targetUrl);
-            if(!res.ok) throw new Error('fetch failed: ' + res.status);
-            const blob = await res.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            try{
-              return await new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => {
-                  try{
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const scale = Math.min(MAX_WIDTH / img.width, 1);
-                    canvas.width = img.width * scale;
-                    canvas.height = img.height * scale;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    resolve({
-                      dataUrl: canvas.toDataURL('image/jpeg', 0.8),
-                      width: canvas.width,
-                      height: canvas.height
-                    });
-                  }catch(drawErr){
-                    reject(drawErr);
-                  }
-                };
-                img.onerror = () => reject(new Error('image decode failed'));
-                img.src = objectUrl;
-              });
-            } finally {
-              URL.revokeObjectURL(objectUrl);
-            }
-          })(), 15000);
-
-          const isLandscape = imgData.width > imgData.height;
-          const pageW = isLandscape ? 130 : 100;
-          const pageH = pageW * (imgData.height / imgData.width);
-          const orientation = isLandscape ? 'landscape' : 'portrait';
-
-          if(!doc) doc = new jsPDF({ orientation: orientation, unit:'mm', format:[pageW, pageH] });
-          else doc.addPage([pageW, pageH], orientation);
-          
-          doc.addImage(imgData.dataUrl, 'JPEG', 0, 0, pageW, pageH, undefined, 'FAST');
-          addedImage = true;
-        }catch(err){
-          console.error("PDF Image error:", p.name, err);
-        }
-      }
-
-      if(!addedImage){
-        const pageW = 100, pageH = 130;
-        if(!doc) doc = new jsPDF({ unit:'mm', format:[pageW, pageH] });
-        else doc.addPage([pageW, pageH]);
-        drawPlaceholder(doc, 8, 8, pageW-16, pageH-50, p.category);
-        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor('#222222');
-        doc.text(p.name, 8, pageH-32, { maxWidth: pageW-16 });
-        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor('#999999');
-        doc.text(p.category, 8, pageH-24);
-        doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor('#B5862F');
-        doc.text('Rs. ' + p.price.toLocaleString('en-IN'), 8, pageH-12);
-      }
-    }
-    return doc.output('blob');
-  }
-
-  function withTimeout(promise, ms){
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('timed out')), ms);
-      promise.then(
-        (val) => { clearTimeout(timer); resolve(val); },
-        (err) => { clearTimeout(timer); reject(err); }
-      );
-    });
-  }
-
-  async function sendAsPDF(list){
-    if(!list.length) return;
-    const btn = document.getElementById('sendPdfBtn');
-    const label = document.getElementById('pdfBtnLabel');
-    btn.disabled = true; 
-    label.textContent = 'PDF..';
-    
+async function processBatch(batchItems){
+  const fetched = await Promise.all(batchItems.map(async (p, i) => {
     try{
-      const blob = await generateCatalogPDF(list);
-      const stamp = new Date().toISOString().replace(/[-:T]/g,'').slice(0,14);
-      const filename = `rangrezz-catalog-${stamp}.pdf`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-      label.textContent = 'Done';
+      const res = await fetch(mediumUrl(p.image));
+      if(!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const baseName = (p.name || `product-${i+1}`).replace(/[\\/:*?"<>|]/g, "").trim();
+      return { ok:true, file: new File([blob], `${baseName}.jpg`, { type: blob.type || "image/jpeg" }) };
+    }catch(e){
+      console.error("Fetch error for:", p.name, e);
+      return { ok:false };
+    }
+  }));
+
+  const files = fetched.filter(f => f.ok).map(f => f.file);
+  if(!files.length){ alert("Images download nahi ho payi."); return false; }
+
+  if(navigator.canShare && navigator.canShare({ files })){
+    try{
+      await navigator.share({ files, title: "Rangrezz Catalog" });
+      return true;
     }catch(err){
-      alert('PDF banane mein dikkat aayi, dobara try karein.');
-      console.error(err);
-      label.textContent = 'PDF';
-    } finally {
-      btn.disabled = false;
-      setTimeout(()=>{ label.textContent = 'PDF'; }, 2500);
+      if(err.name === "AbortError") return false;
+      console.warn("Share failed, falling back to download loop", err);
     }
   }
 
-  function toggleSelect(id){
-    let product = products.find(p => p.id === id);
-    
-    if(!product){
-      const card = document.querySelector(`.card[data-id="${id}"]`);
-      if(card){
-        product = {
-          id: id,
-          name: card.querySelector('.card-name')?.textContent || '',
-          category: card.querySelector('.cat-tag')?.textContent || '',
-          price: parseFloat(card.querySelector('.card-price')?.textContent.replace(/[^\d.]/g, '')) || 0,
-          thumbnail: card.querySelector('img')?.src || '',
-          image: card.querySelector('img')?.dataset.fullImage || card.querySelector('img')?.src || ''
-        };
-      }
+  for(const file of files){
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url; a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  return true;
+}
+
+function updateBatchModal(){
+  if(currentBatchIndex >= batchQueue.length){
+    $("batchModal").style.display = "none";
+    setTimeout(() => alert("Saari images send ho gayi hain!"), 300);
+    return;
+  }
+  const totalBatches = batchQueue.length;
+  const currentBatch = batchQueue[currentBatchIndex];
+  const startNum = (currentBatchIndex * 10) + 1;
+  const endNum = startNum + currentBatch.length - 1;
+  $("batchProgress").textContent = `Batch ${currentBatchIndex + 1} of ${totalBatches}`;
+  const btn = $("batchNextBtn");
+  btn.textContent = `Share Images ${startNum} to ${endNum}`;
+  btn.disabled = false;
+}
+
+$("batchNextBtn").addEventListener("click", async () => {
+  const btn = $("batchNextBtn");
+  btn.textContent = "Processing...";
+  btn.disabled = true;
+  await processBatch(batchQueue[currentBatchIndex]);
+  currentBatchIndex++;
+  updateBatchModal();
+});
+$("batchCloseBtn").addEventListener("click", () => { $("batchModal").style.display = "none"; });
+
+/* ---------------------------------------------------------------
+   PDF CATALOG EXPORT
+--------------------------------------------------------------- */
+function drawPlaceholder(doc, x, y, w, h, category){
+  const [g1] = getColors(category);
+  doc.setFillColor(g1);
+  doc.roundedRect(x, y, w, h, 3, 3, "F");
+  doc.setFont("helvetica","italic"); doc.setFontSize(13); doc.setTextColor("#FFFFFF");
+  doc.text(category, x+w/2, y+h/2, { align:"center" });
+}
+
+function withTimeout(promise, ms){
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timed out")), ms);
+    promise.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+  });
+}
+
+async function generateCatalogPDF(list){
+  const { jsPDF } = window.jspdf;
+  let doc = null;
+
+  for(const p of list){
+    let addedImage = false;
+    if(p.image){
+      try{
+        const imgData = await withTimeout((async () => {
+          const res = await fetch(mediumUrl(p.image));
+          if(!res.ok) throw new Error("fetch failed: " + res.status);
+          const blob = await res.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          try{
+            return await new Promise((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => {
+                try{
+                  const canvas = document.createElement("canvas");
+                  const MAX_WIDTH = 800;
+                  const scale = Math.min(MAX_WIDTH / img.width, 1);
+                  canvas.width = img.width * scale;
+                  canvas.height = img.height * scale;
+                  const ctx = canvas.getContext("2d");
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  resolve({ dataUrl: canvas.toDataURL("image/jpeg", 0.8), width: canvas.width, height: canvas.height });
+                }catch(err){ reject(err); }
+              };
+              img.onerror = () => reject(new Error("image decode failed"));
+              img.src = objectUrl;
+            });
+          }finally{ URL.revokeObjectURL(objectUrl); }
+        })(), 15000);
+
+        const isLandscape = imgData.width > imgData.height;
+        const pageW = isLandscape ? 130 : 100;
+        const pageH = pageW * (imgData.height / imgData.width);
+        const orientation = isLandscape ? "landscape" : "portrait";
+
+        if(!doc) doc = new jsPDF({ orientation, unit:"mm", format:[pageW, pageH] });
+        else doc.addPage([pageW, pageH], orientation);
+        doc.addImage(imgData.dataUrl, "JPEG", 0, 0, pageW, pageH, undefined, "FAST");
+        addedImage = true;
+      }catch(err){ console.error("PDF image error:", p.name, err); }
     }
 
-    if(selected.has(id)){
-      selected.delete(id);
-      selectedMap.delete(id);
-    } else {
-      selected.add(id);
-      if(product) selectedMap.set(id, product);
+    if(!addedImage){
+      const pageW = 100, pageH = 130;
+      if(!doc) doc = new jsPDF({ unit:"mm", format:[pageW, pageH] });
+      else doc.addPage([pageW, pageH]);
+      drawPlaceholder(doc, 8, 8, pageW-16, pageH-50, p.category);
+      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor("#222222");
+      doc.text(p.name, 8, pageH-32, { maxWidth: pageW-16 });
+      doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor("#999999");
+      doc.text(p.category, 8, pageH-24);
+      doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.setTextColor("#B5862F");
+      doc.text("Rs. " + p.price.toLocaleString("en-IN"), 8, pageH-12);
     }
-
-    updateCardSelectionUI(id);
-    renderSelectionBar();
-    updateSelectAllButtonText();
   }
-  window.toggleSelect = toggleSelect;
+  return doc.output("blob");
+}
 
-  function renderSelectionBar(){
-    const bar = document.getElementById('selectionBar');
-    if(selected.size === 0){ bar.classList.remove('show'); return; }
-    bar.classList.add('show');
-    document.getElementById('selCount').textContent = `${selected.size} item${selected.size>1?'s':''} selected`;
+async function sendAsPDF(list){
+  if(!list.length) return;
+  const btn = $("sendPdfBtn");
+  const label = $("pdfBtnLabel");
+  btn.disabled = true; label.textContent = "PDF..";
+  try{
+    const blob = await generateCatalogPDF(list);
+    const stamp = new Date().toISOString().replace(/[-:T]/g,"").slice(0,14);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `rangrezz-catalog-${stamp}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    label.textContent = "Done";
+  }catch(err){
+    alert("PDF banane mein dikkat aayi, dobara try karein.");
+    console.error(err);
+    label.textContent = "PDF";
+  }finally{
+    btn.disabled = false;
+    setTimeout(() => { label.textContent = "PDF"; }, 2500);
   }
+}
 
-  function updateCardSelectionUI(id){
-    const card = document.querySelector(`.card[data-id="${CSS.escape(String(id))}"]`);
-    if(!card) return;
-    const isSel = selected.has(id);
-    card.classList.toggle('selected', isSel);
-    const box = card.querySelector('.select-box');
-    if(box) box.classList.toggle('checked', isSel);
-  }
+/* ---------------------------------------------------------------
+   EVENT WIRING
+--------------------------------------------------------------- */
+function handleSearchTrigger(qText){
+  state.searchQuery = qText;
+  clearSearchBtn.style.display = qText.length > 0 ? "block" : "none";
+  state.visibleCount = PAGE_SIZE;
 
-  function updateSelectAllButtonText(){
-    const selectAllBtn = document.getElementById('selectAllBtn');
-    if(!selectAllBtn) return;
-    const filtered = getFiltered();
-    const visible = filtered.slice(0, visibleCount);
-    const allSelected = visible.length > 0 && visible.every(p=>selected.has(p.id));
-    selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
-    selectAllBtn.style.display = filtered.length ? 'inline-block' : 'none';
-  }
-
-  function renderChips(){
-    const wrap = document.getElementById('catChips');
-    const loadedCats = products.map(p => p.category);
-    const cats = Array.from(new Set([...dynamicCategories, ...loadedCats]));
-
-    wrap.innerHTML = cats.map(c=>
-      `<button class="cat-chip ${c===activeCategory?'active':''}" data-cat="${c}">${c}</button>`
-    ).join('');
-
-    wrap.querySelectorAll('.cat-chip').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const selectedCat = btn.dataset.cat;
-        if(activeCategory === selectedCat) return;
-        activeCategory = selectedCat;
-        hasStarted = true;
-        visibleCount = PAGE_SIZE;
-        sortBy = 'priceLow';
-        const sortSelect = document.getElementById('sortBy');
-        if(sortSelect) sortSelect.value = 'priceLow';
-
-        if (window.fetchCategoryProducts) {
-          window.fetchCategoryProducts(activeCategory);
-        } else {
-          render();
-        }
-      });
-    });
-  }
-
-  function cardHTML(p){
-    const [g1,g2] = getColors(p.category);
-    const displayImg = p.thumbnail || p.image; 
-    const realImg = p.image || p.thumbnail;    
-    const imageInner = displayImg
-      ? `<img src="${displayImg}" data-full-image="${realImg}" alt="${p.name}" loading="lazy" decoding="async" onload="this.classList.add('loaded')">`
-      : `<span>${p.category}</span>`;
-    const isSel = selected.has(p.id);
-    return `
-      <div class="card ${isSel?'selected':''}" data-id="${p.id}">
-        <div class="swatch" style="--g1:${g1};--g2:${g2}">
-          <div class="select-box ${isSel?'checked':''}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#1B0E14" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          </div>
-          ${imageInner}
-        </div>
-        <div class="card-body">
-          <div class="cat-tag">${p.category}</div>
-          <div class="card-name">${p.name}</div>
-          <div class="card-price">₹${p.price.toLocaleString('en-IN')}</div>
-        </div>
-      </div>`;
-  }
-
-  function toggleSelectAll(){
-    const filtered = getFiltered();
-    const visible = filtered.slice(0, visibleCount);
-    const allSelected = visible.length > 0 && visible.every(p=>selected.has(p.id));
-
-    visible.forEach(p=> {
-      if(allSelected){
-        selected.delete(p.id);
-        selectedMap.delete(p.id);
-      } else {
-        selected.add(p.id);
-        selectedMap.set(p.id, p);
-      }
-      updateCardSelectionUI(p.id);
-    });
-    renderSelectionBar();
-    updateSelectAllButtonText();
-  }
-
-  function render(){
-    renderChips();
-    const filtered = getFiltered();
-    const grid = document.getElementById('grid');
-    const empty = document.getElementById('emptyState');
-    const selectAllBtn = document.getElementById('selectAllBtn');
-    const loadMoreWrap = document.getElementById('loadMoreWrap');
-
-    const visible = filtered.slice(0, visibleCount);
-    const allSelected = visible.length > 0 && visible.every(p=>selected.has(p.id));
-
-    selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
-    selectAllBtn.style.display = filtered.length ? 'inline-block' : 'none';
-
-    if(filtered.length === 0){
-      grid.innerHTML = '';
-      empty.style.display = 'block';
-      if(!hasStarted){
-        empty.innerHTML = '<strong>Category chuno ya search karo</strong>Images sirf tabhi load honge jab aap upar se koi category select karenge ya search karenge.';
-      } else {
-        empty.innerHTML = productsLoaded
-          ? '<strong>Koi item nahi mila</strong>Price range badha ke ya category badal ke dekhein.'
-          : '<strong>Catalog load ho raha hai…</strong>Ek pal ruko.';
-      }
-      loadMoreWrap.style.display = 'none';
+  const qLower = qText.toLowerCase().trim();
+  if(qLower){
+    const sortedCats = [...state.categories].sort((a,b) => b.length - a.length);
+    const matchedCat = sortedCats.find(c => qLower.includes(c.toLowerCase()));
+    if(matchedCat && (state.activeCategory !== matchedCat || !state.hasStarted)){
+      state.activeCategory = matchedCat;
+      state.hasStarted = true;
+      state.sortBy = "priceLow";
+      sortSelect.value = "priceLow";
+      fetchProducts({ category: matchedCat, loadMore: false });
       return;
     }
-    empty.style.display = 'none';
-    grid.innerHTML = visible.map(cardHTML).join('');
-
-    const canShowMoreLocal = visibleCount < filtered.length;
-    loadMoreWrap.style.display = (canShowMoreLocal || hasMoreFromFirestore) ? 'block' : 'none';
-    renderSelectionBar();
+    // No category match and none picked yet: nothing to search within.
+    // render() below will show the "pick a category" prompt.
   }
-
-  const searchInput = document.getElementById('searchInput');
-  const clearSearchBtn = document.getElementById('clearSearchBtn');
-
-  function handleSearchTrigger(qText){
-    searchQuery = qText;
-    clearSearchBtn.style.display = searchQuery.length > 0 ? 'block' : 'none';
-    visibleCount = PAGE_SIZE;
-
-    const qLower = searchQuery.toLowerCase().trim();
-    if(qLower){
-      const sortedCats = [...dynamicCategories].sort((a,b) => b.length - a.length);
-      let matchedCat = sortedCats.find(c => qLower.includes(c.toLowerCase()));
-
-      if (matchedCat && activeCategory !== matchedCat) {
-        activeCategory = matchedCat;
-        hasStarted = true;
-        sortBy = 'priceLow';
-        const sortSelect = document.getElementById('sortBy');
-        if(sortSelect) sortSelect.value = 'priceLow';
-        if (window.fetchCategoryProducts) {
-          window.fetchCategoryProducts(matchedCat);
-          return;
-        }
-      } else if (!hasStarted && window.fetchCategoryProducts) {
-        hasStarted = true;
-        activeCategory = 'All';
-        window.fetchCategoryProducts('All');
-        return;
-      }
-    }
-    render();
-  }
-
-  let searchDebounceTimer = null;
-  searchInput.addEventListener('input', (e)=>{
-    clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => {
-      handleSearchTrigger(e.target.value);
-    }, 250);
-  });
-
-  clearSearchBtn.addEventListener('click', ()=>{
-    searchInput.value = '';
-    handleSearchTrigger('');
-  });
-
-  document.getElementById('sortBy').addEventListener('change', (e)=>{ sortBy = e.target.value; render(); });
-
-  document.getElementById('loadMoreBtn').addEventListener('click', ()=>{
-    const filtered = getFiltered();
-    if(visibleCount < filtered.length){
-      visibleCount += PAGE_SIZE;
-      render();
-    } else if(window.loadMoreFromFirestore){
-      window.loadMoreFromFirestore();
-    }
-  });
-
-  document.getElementById('selectAllBtn').addEventListener('click', toggleSelectAll);
-  
-  document.getElementById('grid').addEventListener('click', (e) => {
-    const card = e.target.closest('.card');
-    if (!card) return;
-    const id = card.dataset.id;
-    if (id) toggleSelect(id);
-  });
-  
-  document.querySelectorAll('.try-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      const val = chip.dataset.q;
-      searchInput.value = val;
-      handleSearchTrigger(val);
-    });
-  });
-
-  document.getElementById('clearSelBtn').addEventListener('click', ()=>{
-    const ids = Array.from(selected);
-    selected.clear();
-    selectedMap.clear();
-    ids.forEach(id => updateCardSelectionUI(id));
-    renderSelectionBar();
-    updateSelectAllButtonText();
-  });
-  document.getElementById('sendSelectedBtn').addEventListener('click', ()=>{
-    const list = Array.from(selectedMap.values());
-    if(list.length) downloadToGallery(list);
-  });
-  document.getElementById('sendPdfBtn').addEventListener('click', ()=>{
-    const list = Array.from(selectedMap.values());
-    if(list.length) sendAsPDF(list);
-  });
-
   render();
-</script>
+}
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, enableIndexedDbPersistence, collection, query, where, orderBy, limit, startAfter, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+let searchDebounceTimer = null;
+searchInput.addEventListener("input", (e) => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => handleSearchTrigger(e.target.value), 250);
+});
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB8ydTYbhm5o04xu3uWLj53MEW31aoxs6w",
-    authDomain: "rangrezz-new-catalog.firebaseapp.com",
-    projectId: "rangrezz-new-catalog",
-    storageBucket: "rangrezz-new-catalog.firebasestorage.app",
-    messagingSenderId: "618132160742",
-    appId: "1:618132160742:web:0e3e921498259cbaec3b27"
-  };
+clearSearchBtn.addEventListener("click", () => { searchInput.value = ""; handleSearchTrigger(""); });
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+sortSelect.addEventListener("change", (e) => { state.sortBy = e.target.value; render(); });
 
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.log("Persistence failed: Multiple tabs open.");
-    } else if (err.code === 'unimplemented') {
-      console.log("Persistence unavailable on this browser.");
-    }
+loadMoreBtn.addEventListener("click", () => {
+  const filtered = getFiltered();
+  if(state.visibleCount < filtered.length){
+    state.visibleCount += PAGE_SIZE;
+    render();
+  }else if(state.hasMoreRemote){
+    fetchProducts({ category: state.activeCategory, loadMore: true });
+  }
+});
+
+selectAllBtn.addEventListener("click", toggleSelectAll);
+
+grid.addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if(!card || card.classList.contains("card-skel")) return;
+  const id = card.dataset.id;
+  if(id) toggleSelect(id);
+});
+
+document.querySelectorAll(".try-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    const val = chip.dataset.q;
+    searchInput.value = val;
+    handleSearchTrigger(val);
   });
+});
 
-  let lastDoc = null;
-  let isLoading = false;
-  let currentCategory = 'All';
-  const FETCH_LIMIT = 25;
+$("clearSelBtn").addEventListener("click", () => {
+  const ids = Array.from(state.selected.keys());
+  state.selected.clear();
+  ids.forEach(updateCardSelectionUI);
+  renderSelectionBar();
+  updateSelectAllButtonText();
+});
+$("sendSelectedBtn").addEventListener("click", () => {
+  const list = Array.from(state.selected.values());
+  if(list.length) downloadToGallery(list);
+});
+$("sendPdfBtn").addEventListener("click", () => {
+  const list = Array.from(state.selected.values());
+  if(list.length) sendAsPDF(list);
+});
 
-  async function loadCategoriesFromFirestore() {
-    try {
-      const snap = await getDocs(collection(db, "categories"));
-      if (!snap.empty) {
-        const catNames = snap.docs.map(doc => doc.data().name).filter(Boolean);
-        catNames.sort((a, b) => a.localeCompare(b));
-        window.setCategories(catNames);
-      }
-    } catch (err) {
-      console.error("Category fetch error:", err);
-    }
-  }
-
-  async function fetchProductsFromFirestore(category = 'All', isLoadMore = false) {
-    if (isLoading) return;
-    isLoading = true;
-
-    if (!isLoadMore) {
-      lastDoc = null;
-      currentCategory = category;
-      window.setProducts([], true);
-    }
-
-    const btn = document.getElementById('loadMoreBtn');
-    if (btn && isLoadMore) btn.textContent = 'Loading...';
-
-    try {
-      let constraints = [];
-      if (category !== 'All') {
-        constraints.push(where("category", "==", category));
-      }
-      constraints.push(orderBy("createdAt", "desc"));
-
-      if (isLoadMore && lastDoc) {
-        constraints.push(startAfter(lastDoc));
-      }
-      constraints.push(limit(FETCH_LIMIT));
-
-      let snapshot;
-      try {
-        const q = query(collection(db, "products"), ...constraints);
-        snapshot = await getDocs(q);
-      } catch (indexErr) {
-        let fallbackConstraints = [];
-        if (category !== 'All') fallbackConstraints.push(where("category", "==", category));
-        if (isLoadMore && lastDoc) fallbackConstraints.push(startAfter(lastDoc));
-        fallbackConstraints.push(limit(FETCH_LIMIT));
-
-        const qFallback = query(collection(db, "products"), ...fallbackConstraints);
-        snapshot = await getDocs(qFallback);
-      }
-
-      if (!snapshot.empty) {
-        lastDoc = snapshot.docs[snapshot.docs.length - 1];
-
-        const fetchedProducts = snapshot.docs
-          .filter(docSnap => docSnap.data().isDeleted !== true)
-          .map(docSnap => {
-            const d = docSnap.data();
-            return {
-              id: docSnap.id,
-              name: d.name || '',
-              category: d.category || '',
-              price: d.price || 0,
-              thumbnail: d.thumbnail || d.image || '', 
-              image: d.image || d.thumbnail || ''      
-            };
-          });
-
-        const hasMore = snapshot.docs.length === FETCH_LIMIT;
-        if (isLoadMore) {
-          window.appendProducts(fetchedProducts, hasMore);
-        } else {
-          window.setProducts(fetchedProducts, hasMore);
-        }
-      } else {
-        if (isLoadMore) window.updateHasMore(false);
-        else window.setProducts([], false);
-      }
-    } catch (error) {
-      console.error("Firestore Fetch Error:", error);
-      if (!isLoadMore) window.setProducts([], false);
-    } finally {
-      isLoading = false;
-      if (btn) btn.textContent = 'Load more';
-    }
-  }
-
-  window.fetchCategoryProducts = function(cat) {
-    fetchProductsFromFirestore(cat, false);
-  };
-
-  window.loadMoreFromFirestore = function() {
-    fetchProductsFromFirestore(currentCategory, true);
-  };
-
-  loadCategoriesFromFirestore();
+/* ---------------------------------------------------------------
+   BOOT — only categories load on open (cheap, one read of the
+   categories collection). Products are fetched only once the user
+   taps a category or types a search, to keep Firestore reads down.
+--------------------------------------------------------------- */
+render();
+loadCategories();
 </script>
 </body>
 </html>
