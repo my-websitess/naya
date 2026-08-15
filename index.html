@@ -175,15 +175,10 @@
 
   <div class="filter-row">
     <div class="cat-chips" id="catChips">
-      <button class="cat-chip" data-cat="SAREE">SAREE</button>
-      <button class="cat-chip" data-cat="SILK SAREE">SILK SAREE</button>
-      <button class="cat-chip" data-cat="KURTI">KURTI</button>
-      <button class="cat-chip" data-cat="SINGLE KURTI">SINGLE KURTI</button>
-      <button class="cat-chip" data-cat="LEHENGA">LEHENGA</button>
-      <button class="cat-chip" data-cat="3 PIECE">3 PIECE</button>
-      <button class="cat-chip" data-cat="2 PIECE">2 PIECE</button>
-      <button class="cat-chip" data-cat="DUPATTA">DUPATTA</button>
-      <button class="cat-chip" data-cat="BLOUSE">BLOUSE</button>
+      <!-- Populated dynamically by renderChips() from the Firestore
+           `categories` collection (or its localStorage cache) — no
+           hardcoded categories here, so a deleted/renamed category can
+           never reappear as a ghost chip. -->
     </div>
   </div>
 
@@ -275,7 +270,7 @@ const PAGE_SIZE = 12;
    Key: rangrezz_cache_<CATEGORY>   TTL: 6 hours.
 --------------------------------------------------------------- */
 const CACHE_PREFIX = "rangrezz_cache_";
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const CACHE_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 function cacheKeyFor(category){
   return CACHE_PREFIX + String(category || "").trim().toUpperCase();
@@ -318,16 +313,11 @@ function writeProductCache(category, { products, lastDocId, hasMoreRemote }){
    raw p.image URL is used everywhere (grid, gallery, PDF) — this keeps
    every request identical and lets the Bunny CDN cache hit ~99%. */
 
-/* Matches the hardcoded chips already in the HTML — the UI renders these
-   instantly on load without waiting for Firestore. loadCategories() below
-   still syncs in the background and merges in any new/renamed categories. */
-const DEFAULT_CATEGORIES = ["SAREE","SILK SAREE","KURTI","SINGLE KURTI","LEHENGA","3 PIECE","2 PIECE","DUPATTA","BLOUSE"];
-
 /* ---------------------------------------------------------------
    APP STATE
 --------------------------------------------------------------- */
 const state = {
-  categories: [...DEFAULT_CATEGORIES],
+  categories: [], // no hardcoded defaults — populated only from real data (loadCategories)
   categoriesLoaded: false,
   products: [],
   productsLoaded: false,
@@ -383,28 +373,31 @@ statusRetryBtn.addEventListener("click", () => { hideStatus(); if(retryFn) retry
    FIRESTORE FETCHING
 --------------------------------------------------------------- */
 async function loadCategories(){
-  // Hardcoded defaults already render instantly (see cat-chips in the HTML).
-  // This only syncs additions/renames in the background — never blocks the UI.
+  // No hardcoded defaults anywhere — categoriesList only ever reflects what
+  // is actually in Firestore (or its localStorage mirror), so a category
+  // the admin deleted or renamed can never come back as a ghost chip here.
   const cached = localStorage.getItem("rangrezz_categories_v1");
   if(cached){
     try{
       const names = JSON.parse(cached);
-      if(Array.isArray(names) && names.length){
-        state.categories = Array.from(new Set([...DEFAULT_CATEGORIES, ...names])).sort((a,b)=>a.localeCompare(b));
+      if(Array.isArray(names)){
+        state.categories = names.slice().sort((a,b)=>a.localeCompare(b));
+        state.categoriesLoaded = true;
         renderChips();
       }
     }catch(e){}
   }
   try{
+    // Background sync against Firestore so admin-side changes (add/rename/
+    // delete) reach this device even if it already had a cached list.
     const snap = await getDocs(collection(db, "categories"));
     const names = snap.docs.map(d => d.data().name).filter(Boolean);
-    if(names.length){
-      state.categories = Array.from(new Set([...DEFAULT_CATEGORIES, ...names])).sort((a,b)=>a.localeCompare(b));
-      localStorage.setItem("rangrezz_categories_v1", JSON.stringify(names));
-    }
+    state.categories = names.slice().sort((a,b)=>a.localeCompare(b));
+    localStorage.setItem("rangrezz_categories_v1", JSON.stringify(names));
   }catch(err){
     console.error("Category fetch error:", err);
-    // Defaults are already on screen, so no error banner needed for this.
+    // If a cached list is already on screen, leave it as-is; otherwise
+    // the empty-state message in renderChips covers a first-time failure.
   }finally{
     state.categoriesLoaded = true;
     renderChips();
@@ -418,7 +411,8 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
   if(!loadMore){
     state.activeCategory = category;
 
-    // 1) LOCAL CACHE FIRST — a fresh (<6h) cache entry means 0 Firestore reads.
+    // 1) LOCAL CACHE FIRST — a fresh (<48h) cache entry means an instant,
+    // 0-Firestore-read render.
     const cached = readProductCache(category);
     if(cached){
       state.products = cached.products;
@@ -428,10 +422,18 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
       state.visibleCount = state.products.length;
       hideStatus();
       render();
-      return; // no Firestore call
+
+      // 2) SMART SYNC (DELTA FETCH) — silently, in the background, pull only
+      // items newer than what's cached and prepend them. This is what lets
+      // a fresh upload show up immediately without waiting out the 48h TTL
+      // or wiping/re-downloading everything already cached.
+      deltaSyncProducts(category);
+      return; // instant paint — no blocking Firestore call
     }
 
-    // No valid cache — reset and show skeletons while we go fetch fresh data.
+    // No valid cache (missing, corrupt, or older than 48h) — reset and show
+    // skeletons while we go do a full fresh fetch (this also naturally
+    // picks up any deletions or price changes the delta sync wouldn't).
     state.lastDocId = null;
     state.products = [];
     state.productsLoaded = false;
@@ -442,7 +444,7 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
     loadMoreBtn.disabled = true;
   }
 
-  // 2) "Load more" always bypasses the cache and goes straight to Firestore.
+  // 3) "Load more" always bypasses the cache and goes straight to Firestore.
   state.isFetching = true;
   try{
     // Filter by category and order by document ID (not price/name) so that
@@ -468,7 +470,8 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
             name: v.name || "",
             category: v.category || "",
             price: Number(v.price) || 0,
-            image: fullImage
+            image: fullImage,
+            createdAt: v.createdAt || "" // needed so delta-fetch knows what's "newest"
           };
         });
       const existingIds = new Set(state.products.map(p => p.id));
@@ -483,10 +486,10 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
     state.productsLoaded = true;
     hideStatus();
 
-    // 3) Save fresh data + timestamp back to localStorage — either creating
+    // 4) Save fresh data + timestamp back to localStorage — either creating
     // the cache entry (first-ever fetch for this category) or refreshing it
     // with the appended batch (Load More), so the next category switch
-    // within 6h costs 0 reads again.
+    // within 48h costs 0 reads (beyond the silent delta sync) again.
     writeProductCache(category, {
       products: state.products,
       lastDocId: state.lastDocId,
@@ -507,6 +510,83 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
     loadMoreBtn.disabled = false;
     loadMoreBtn.textContent = "Load more";
     render();
+  }
+}
+
+/* ---------------------------------------------------------------
+   DELTA FETCH — silent background sync for a cache-hit category.
+   Finds the newest createdAt already in the cache, then asks Firestore
+   for only items created after that point, and prepends whatever comes
+   back. Never blocks or shows a status banner — the cached grid the user
+   already sees just stays put if this fails or finds nothing new.
+--------------------------------------------------------------- */
+async function deltaSyncProducts(category){
+  // Don't let a background sync race an explicit fetch/loadMore for the
+  // same or a different category.
+  if(state.isFetching) return;
+
+  const cached = readProductCache(category);
+  if(!cached || !cached.products || !cached.products.length) return; // nothing to delta against
+
+  // Newest cached timestamp — computed as a max rather than assuming
+  // cachedProducts[0] is newest, since the cached array is stored in
+  // Firestore document-ID order (for Load More pagination), not
+  // createdAt order.
+  const newestCreatedAt = cached.products.reduce(
+    (max, p) => (p.createdAt && p.createdAt > max) ? p.createdAt : max, ""
+  );
+  if(!newestCreatedAt) return; // older cache entries may predate the createdAt field entirely
+
+  try{
+    const snap = await getDocs(query(
+      collection(db, "products"),
+      where("category", "==", category),
+      where("createdAt", ">", newestCreatedAt),
+      orderBy("createdAt", "desc")
+    ));
+
+    if(snap.empty) return; // already fully caught up
+
+    const freshItems = snap.docs
+      .filter(d => d.data().isDeleted !== true)
+      .map(d => {
+        const v = d.data();
+        const fullImage = v.image || v.thumbnail || "";
+        return {
+          id: d.id,
+          name: v.name || "",
+          category: v.category || "",
+          price: Number(v.price) || 0,
+          image: fullImage,
+          createdAt: v.createdAt || ""
+        };
+      });
+    if(!freshItems.length) return;
+
+    // The user may have switched categories while this was in flight —
+    // don't clobber whatever they're looking at now.
+    if(state.activeCategory !== category) return;
+
+    const existingIds = new Set(state.products.map(p => p.id));
+    const uniqueNew = freshItems.filter(p => !existingIds.has(p.id));
+    if(!uniqueNew.length) return;
+
+    state.products = [...uniqueNew, ...state.products];
+    state.visibleCount = state.products.length;
+    render();
+
+    // Merge back into localStorage so the next visit starts from the
+    // synced list too.
+    writeProductCache(category, {
+      products: state.products,
+      lastDocId: state.lastDocId,
+      hasMoreRemote: state.hasMoreRemote
+    });
+  }catch(err){
+    // Silent by design. Most likely cause is a missing composite index
+    // (category ASC, createdAt DESC) — Firestore's error includes a direct
+    // console link to create it; the cached grid stays visible either way.
+    console.error("Delta sync error:", err);
   }
 }
 
@@ -586,9 +666,20 @@ function escapeAttr(s){ return escapeHtml(s); }
 let chipsSignature = "";
 function renderChips(){
   const cats = Array.from(new Set(state.categories));
-  const sig = cats.join("|") + "::" + state.activeCategory;
+  const sig = (state.categoriesLoaded ? "loaded" : "loading") + "::" + cats.join("|") + "::" + state.activeCategory;
   if(sig === chipsSignature) return; // avoid rebuilding chips on every keystroke/render
   chipsSignature = sig;
+
+  if(!state.categoriesLoaded){
+    // Skeleton placeholders only — never a hardcoded/fake category name.
+    catChips.innerHTML = Array.from({ length: 6 }).map(() => `<div class="cat-chip-skel"></div>`).join("");
+    return;
+  }
+
+  if(cats.length === 0){
+    catChips.innerHTML = `<span style="font-size:12.5px;color:var(--ivory-dim);">Categories jald hi aayengi.</span>`;
+    return;
+  }
 
   catChips.innerHTML = cats.map(c =>
     `<button class="cat-chip ${c===state.activeCategory?"active":""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>`
