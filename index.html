@@ -237,7 +237,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  collection, query, where, limit, startAfter, getDocs
+  collection, query, where, limit, startAfter, getDocs, orderBy, documentId
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 /* ---------------------------------------------------------------
@@ -269,6 +269,48 @@ try{
 const FETCH_LIMIT = 24;
 const PAGE_SIZE = 12;
 
+/* ---------------------------------------------------------------
+   LOCAL PRODUCT CACHE (localStorage) — kills repeat Firestore reads
+   when a user bounces between categories (SAREE -> LEHENGA -> SAREE).
+   Key: rangrezz_cache_<CATEGORY>   TTL: 6 hours.
+--------------------------------------------------------------- */
+const CACHE_PREFIX = "rangrezz_cache_";
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+function cacheKeyFor(category){
+  return CACHE_PREFIX + String(category || "").trim().toUpperCase();
+}
+
+// Returns the cached payload for a category, or null if missing/expired/corrupt.
+function readProductCache(category){
+  try{
+    const raw = localStorage.getItem(cacheKeyFor(category));
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || !Array.isArray(parsed.products) || typeof parsed.timestamp !== "number") return null;
+    if(Date.now() - parsed.timestamp > CACHE_TTL_MS) return null; // stale — treat as a miss
+    return parsed;
+  }catch(e){
+    return null; // corrupt cache entry — fall back to a normal Firestore fetch
+  }
+}
+
+// Writes/refreshes the cache entry for a category with a fresh timestamp.
+function writeProductCache(category, { products, lastDocId, hasMoreRemote }){
+  try{
+    localStorage.setItem(cacheKeyFor(category), JSON.stringify({
+      products,
+      lastDocId: lastDocId || null,
+      hasMoreRemote: !!hasMoreRemote,
+      timestamp: Date.now()
+    }));
+  }catch(e){
+    // Storage full/unavailable (e.g. private browsing) — fail silently,
+    // Firestore just remains the source of truth for this session.
+    console.error("Product cache write error:", e);
+  }
+}
+
 /* No query-param resizing (?width=&quality=) is appended to image URLs.
    Bunny Optimizer isn't enabled on the pull zone, so any dynamic params
    act as cache-busters and force every request back to the EU origin.
@@ -290,7 +332,7 @@ const state = {
   products: [],
   productsLoaded: false,
   hasMoreRemote: true,
-  lastDoc: null,
+  lastDocId: null,
   activeCategory: null, // no default — a real category must be picked before any read happens
   searchQuery: "",
   sortBy: "relevance",
@@ -372,11 +414,25 @@ async function loadCategories(){
 async function fetchProducts({ category = state.activeCategory, loadMore = false } = {}){
   if(!category) return; // never fetch without a specific, user-picked category
   if(state.isFetching) return;
-  state.isFetching = true;
 
   if(!loadMore){
-    state.lastDoc = null;
     state.activeCategory = category;
+
+    // 1) LOCAL CACHE FIRST — a fresh (<6h) cache entry means 0 Firestore reads.
+    const cached = readProductCache(category);
+    if(cached){
+      state.products = cached.products;
+      state.lastDocId = cached.lastDocId || null;
+      state.hasMoreRemote = !!cached.hasMoreRemote;
+      state.productsLoaded = true;
+      state.visibleCount = state.products.length;
+      hideStatus();
+      render();
+      return; // no Firestore call
+    }
+
+    // No valid cache — reset and show skeletons while we go fetch fresh data.
+    state.lastDocId = null;
     state.products = [];
     state.productsLoaded = false;
     state.visibleCount = PAGE_SIZE;
@@ -386,18 +442,22 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
     loadMoreBtn.disabled = true;
   }
 
+  // 2) "Load more" always bypasses the cache and goes straight to Firestore.
+  state.isFetching = true;
   try{
-    // Always filter by a specific category, never orderBy alongside it —
-    // where() + orderBy() together would need a Firestore composite index.
-    // Results are sorted client-side (price low-to-high) right after anyway.
-    const constraints = [ where("category", "==", category) ];
-    if(loadMore && state.lastDoc) constraints.push(startAfter(state.lastDoc));
+    // Filter by category and order by document ID (not price/name) so that
+    // startAfter() can use a plain, serializable ID string as its cursor —
+    // that string is what gets cached, letting Load More resume pagination
+    // correctly even after a cache-hit page load. Results are still sorted
+    // client-side (price low-to-high) for display right after this.
+    const constraints = [ where("category", "==", category), orderBy(documentId()) ];
+    if(loadMore && state.lastDocId) constraints.push(startAfter(state.lastDocId));
     constraints.push(limit(FETCH_LIMIT));
 
     const snap = await getDocs(query(collection(db, "products"), ...constraints));
 
     if(!snap.empty){
-      state.lastDoc = snap.docs[snap.docs.length - 1];
+      state.lastDocId = snap.docs[snap.docs.length - 1].id;
       const fetched = snap.docs
         .filter(d => d.data().isDeleted !== true)
         .map(d => {
@@ -422,6 +482,16 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
     }
     state.productsLoaded = true;
     hideStatus();
+
+    // 3) Save fresh data + timestamp back to localStorage — either creating
+    // the cache entry (first-ever fetch for this category) or refreshing it
+    // with the appended batch (Load More), so the next category switch
+    // within 6h costs 0 reads again.
+    writeProductCache(category, {
+      products: state.products,
+      lastDocId: state.lastDocId,
+      hasMoreRemote: state.hasMoreRemote
+    });
   }catch(err){
     console.error("Firestore fetch error:", err);
     state.productsLoaded = true;
