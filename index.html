@@ -189,6 +189,7 @@
       <option value="priceHigh">Price: High to Low</option>
     </select>
     <button class="select-all-btn" id="selectAllBtn" style="display:none">Select All</button>
+    <button id="refreshCatBtn" class="select-all-btn" style="margin-left:auto;">Refresh 🔄</button>
   </div>
 </div>
 
@@ -350,6 +351,7 @@ const loadMoreWrap = $("loadMoreWrap");
 const loadMoreBtn = $("loadMoreBtn");
 const catChips = $("catChips");
 const selectAllBtn = $("selectAllBtn");
+const refreshCatBtn = $("refreshCatBtn");
 const searchInput = $("searchInput");
 const clearSearchBtn = $("clearSearchBtn");
 const sortSelect = $("sortBy");
@@ -515,11 +517,81 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
 }
 
 /* ---------------------------------------------------------------
+   SELF-HEALING FALLBACK — a standard fresh background fetch of the
+   first page (FETCH_LIMIT) for `category`, same shape as the primary
+   fetchProducts() Firestore read. Used whenever the delta sync can't
+   safely compute a delta (no newestCreatedAt in an old-format cache)
+   or the delta query itself fails (missing composite index). Updates
+   state.products, re-renders, and overwrites the localStorage cache
+   so the category "heals" itself instead of permanently serving
+   stale/broken data.
+--------------------------------------------------------------- */
+async function backgroundFreshFetch(category){
+  try{
+    const snap = await getDocs(query(
+      collection(db, "products"),
+      where("category", "==", category),
+      orderBy(documentId()),
+      limit(FETCH_LIMIT)
+    ));
+
+    // The user may have switched categories while this was in flight —
+    // don't clobber whatever they're looking at now.
+    if(state.activeCategory !== category) return;
+
+    if(!snap.empty){
+      state.lastDocId = snap.docs[snap.docs.length - 1].id;
+      const fetched = snap.docs
+        .filter(d => d.data().isDeleted !== true)
+        .map(d => {
+          const v = d.data();
+          const fullImage = v.image || v.thumbnail || "";
+          return {
+            id: d.id,
+            name: v.name || "",
+            category: v.category || "",
+            price: Number(v.price) || 0,
+            image: fullImage,
+            createdAt: v.createdAt || ""
+          };
+        });
+      state.products = fetched;
+      state.hasMoreRemote = snap.docs.length === FETCH_LIMIT;
+      state.visibleCount = state.products.length;
+    }else{
+      state.products = [];
+      state.lastDocId = null;
+      state.hasMoreRemote = false;
+      state.visibleCount = 0;
+    }
+    state.productsLoaded = true;
+    render();
+
+    // Overwrite the cache entirely — this is what heals an old-format
+    // cache and picks up any edits/deletions the delta sync would miss.
+    writeProductCache(category, {
+      products: state.products,
+      lastDocId: state.lastDocId,
+      hasMoreRemote: state.hasMoreRemote
+    });
+  }catch(err){
+    // Silent by design, same as deltaSyncProducts — the cached grid the
+    // user already sees just stays put if even the fallback fails.
+    console.error("Self-healing fresh fetch failed:", err);
+  }
+}
+
+/* ---------------------------------------------------------------
    DELTA FETCH — silent background sync for a cache-hit category.
    Finds the newest createdAt already in the cache, then asks Firestore
    for only items created after that point, and prepends whatever comes
    back. Never blocks or shows a status banner — the cached grid the user
    already sees just stays put if this fails or finds nothing new.
+
+   SELF-HEALING: if the cache predates the createdAt field (no
+   newestCreatedAt) or the delta query hits a missing composite index
+   (failed-precondition), this falls back to backgroundFreshFetch()
+   instead of silently giving up, so the category repairs itself.
 --------------------------------------------------------------- */
 async function deltaSyncProducts(category){
   // Don't let a background sync race an explicit fetch/loadMore for the
@@ -536,7 +608,13 @@ async function deltaSyncProducts(category){
   const newestCreatedAt = cached.products.reduce(
     (max, p) => (p.createdAt && p.createdAt > max) ? p.createdAt : max, ""
   );
-  if(!newestCreatedAt) return; // older cache entries may predate the createdAt field entirely
+  if(!newestCreatedAt){
+    // Older/malformed cache entry that predates the createdAt field —
+    // can't compute a delta against nothing, so self-heal with a full
+    // fresh fetch instead of permanently serving this stale cache.
+    await backgroundFreshFetch(category);
+    return;
+  }
 
   try{
     const snap = await getDocs(query(
@@ -590,11 +668,14 @@ async function deltaSyncProducts(category){
     if(err && err.code === "failed-precondition"){
       // Missing composite index (category ASC, createdAt DESC). Firestore's
       // error message includes a direct console link to create it — surface
-      // that clearly instead of a generic "fetch error" log.
+      // that clearly instead of a generic "fetch error" log, and self-heal
+      // by falling back to a standard fresh fetch so the user isn't stuck
+      // on stale data until someone creates the index.
       console.error(
         "Delta sync needs a Firestore composite index (category + createdAt). Click the link in the error below to create it:",
         err
       );
+      await backgroundFreshFetch(category);
     }else{
       console.error("Delta sync error:", err);
     }
@@ -1023,6 +1104,22 @@ searchInput.addEventListener("input", (e) => {
 clearSearchBtn.addEventListener("click", () => { searchInput.value = ""; handleSearchTrigger(""); });
 
 sortSelect.addEventListener("change", (e) => { state.sortBy = e.target.value; render(); });
+
+refreshCatBtn.addEventListener("click", async () => {
+  const category = state.activeCategory;
+  if(!category) return; // nothing selected yet, nothing to refresh
+  refreshCatBtn.textContent = "Refreshing...";
+  refreshCatBtn.disabled = true;
+  try{
+    // Completely delete this category's cache so fetchProducts() can't
+    // take the cache-hit path — forces a 100% fresh Firestore read.
+    localStorage.removeItem(cacheKeyFor(category));
+    await fetchProducts({ category, loadMore: false });
+  }finally{
+    refreshCatBtn.textContent = "Refresh 🔄";
+    refreshCatBtn.disabled = false;
+  }
+});
 
 loadMoreBtn.addEventListener("click", () => {
   const filtered = getFiltered();
