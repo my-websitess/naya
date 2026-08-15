@@ -174,7 +174,17 @@
   </div>
 
   <div class="filter-row">
-    <div class="cat-chips" id="catChips"><div class="cat-chip-skel"></div><div class="cat-chip-skel"></div><div class="cat-chip-skel"></div></div>
+    <div class="cat-chips" id="catChips">
+      <button class="cat-chip" data-cat="SAREE">SAREE</button>
+      <button class="cat-chip" data-cat="SILK SAREE">SILK SAREE</button>
+      <button class="cat-chip" data-cat="KURTI">KURTI</button>
+      <button class="cat-chip" data-cat="SINGLE KURTI">SINGLE KURTI</button>
+      <button class="cat-chip" data-cat="LEHENGA">LEHENGA</button>
+      <button class="cat-chip" data-cat="3 PIECE">3 PIECE</button>
+      <button class="cat-chip" data-cat="2 PIECE">2 PIECE</button>
+      <button class="cat-chip" data-cat="DUPATTA">DUPATTA</button>
+      <button class="cat-chip" data-cat="BLOUSE">BLOUSE</button>
+    </div>
   </div>
 
   <div class="sub-controls-row">
@@ -256,47 +266,26 @@ try{
   db = getFirestore(app);
 }
 
-const BUNNY_HOST = "rangrezz-new-catalog.b-cdn.net";
 const FETCH_LIMIT = 24;
 const PAGE_SIZE = 12;
 
-/* Bunny.net can resize/compress on the fly via query params (Optimizer add-on).
-   Grid thumbnails ask for a small width; if Optimizer isn't enabled on the
-   pull zone, Bunny just ignores the params and serves the original — safe either way. */
-function thumbUrl(url, width){
-  if(!url) return "";
-  try{
-    const u = new URL(url);
-    if(u.hostname === BUNNY_HOST){
-      u.searchParams.set("width", String(width));
-      u.searchParams.set("quality", "72");
-      return u.toString();
-    }
-  }catch(e){ /* not a valid absolute URL, use as-is */ }
-  return url;
-}
+/* No query-param resizing (?width=&quality=) is appended to image URLs.
+   Bunny Optimizer isn't enabled on the pull zone, so any dynamic params
+   act as cache-busters and force every request back to the EU origin.
+   Images are already pre-compressed via canvas at upload time, so the
+   raw p.image URL is used everywhere (grid, gallery, PDF) — this keeps
+   every request identical and lets the Bunny CDN cache hit ~99%. */
 
-/* Used for Gallery-share and PDF export — still much lighter than the
-   original upload, but sharper than the grid thumbnail (width ~900px,
-   78% quality) since these are the copies people actually keep/print. */
-function mediumUrl(url, width = 900){
-  if(!url) return "";
-  try{
-    const u = new URL(url);
-    if(u.hostname === BUNNY_HOST){
-      u.searchParams.set("width", String(width));
-      u.searchParams.set("quality", "78");
-      return u.toString();
-    }
-  }catch(e){ /* not a valid absolute URL, use as-is */ }
-  return url;
-}
+/* Matches the hardcoded chips already in the HTML — the UI renders these
+   instantly on load without waiting for Firestore. loadCategories() below
+   still syncs in the background and merges in any new/renamed categories. */
+const DEFAULT_CATEGORIES = ["SAREE","SILK SAREE","KURTI","SINGLE KURTI","LEHENGA","3 PIECE","2 PIECE","DUPATTA","BLOUSE"];
 
 /* ---------------------------------------------------------------
    APP STATE
 --------------------------------------------------------------- */
 const state = {
-  categories: [],
+  categories: [...DEFAULT_CATEGORIES],
   categoriesLoaded: false,
   products: [],
   productsLoaded: false,
@@ -352,20 +341,28 @@ statusRetryBtn.addEventListener("click", () => { hideStatus(); if(retryFn) retry
    FIRESTORE FETCHING
 --------------------------------------------------------------- */
 async function loadCategories(){
+  // Hardcoded defaults already render instantly (see cat-chips in the HTML).
+  // This only syncs additions/renames in the background — never blocks the UI.
   const cached = localStorage.getItem("rangrezz_categories_v1");
   if(cached){
-    try{ state.categories = JSON.parse(cached); renderChips(); }catch(e){}
+    try{
+      const names = JSON.parse(cached);
+      if(Array.isArray(names) && names.length){
+        state.categories = Array.from(new Set([...DEFAULT_CATEGORIES, ...names])).sort((a,b)=>a.localeCompare(b));
+        renderChips();
+      }
+    }catch(e){}
   }
   try{
     const snap = await getDocs(collection(db, "categories"));
-    const names = snap.docs.map(d => d.data().name).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+    const names = snap.docs.map(d => d.data().name).filter(Boolean);
     if(names.length){
-      state.categories = names;
+      state.categories = Array.from(new Set([...DEFAULT_CATEGORIES, ...names])).sort((a,b)=>a.localeCompare(b));
       localStorage.setItem("rangrezz_categories_v1", JSON.stringify(names));
     }
   }catch(err){
     console.error("Category fetch error:", err);
-    if(!state.categories.length) showStatus("Categories load nahi ho payi. Internet check karo.", loadCategories);
+    // Defaults are already on screen, so no error banner needed for this.
   }finally{
     state.categoriesLoaded = true;
     renderChips();
@@ -411,8 +408,7 @@ async function fetchProducts({ category = state.activeCategory, loadMore = false
             name: v.name || "",
             category: v.category || "",
             price: Number(v.price) || 0,
-            image: fullImage,
-            thumb: thumbUrl(fullImage, 400)
+            image: fullImage
           };
         });
       const existingIds = new Set(state.products.map(p => p.id));
@@ -496,7 +492,7 @@ function skeletonCardsHTML(n){
 function cardHTML(p){
   const [g1,g2] = getColors(p.category);
   const imageInner = p.image
-    ? `<img src="${p.thumb}" data-full-image="${p.image}" alt="${escapeAttr(p.name)}" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.remove()">`
+    ? `<img src="${p.image}" alt="${escapeAttr(p.name)}" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.remove()">`
     : `<span>${escapeHtml(p.category)}</span>`;
   const isSel = state.selected.has(p.id);
   return `
@@ -527,18 +523,6 @@ function renderChips(){
   catChips.innerHTML = cats.map(c =>
     `<button class="cat-chip ${c===state.activeCategory?"active":""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>`
   ).join("");
-
-  catChips.querySelectorAll(".cat-chip").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const cat = btn.dataset.cat;
-      if(state.activeCategory === cat && state.hasStarted) return;
-      state.activeCategory = cat;
-      state.hasStarted = true;
-      state.sortBy = "priceLow";
-      sortSelect.value = "priceLow";
-      fetchProducts({ category: cat, loadMore: false });
-    });
-  });
 }
 
 function render(){
@@ -667,7 +651,7 @@ async function downloadToGallery(list){
 async function processBatch(batchItems){
   const fetched = await Promise.all(batchItems.map(async (p, i) => {
     try{
-      const res = await fetch(mediumUrl(p.image));
+      const res = await fetch(p.image);
       if(!res.ok) throw new Error("fetch failed");
       const blob = await res.blob();
       const baseName = (p.name || `product-${i+1}`).replace(/[\\/:*?"<>|]/g, "").trim();
@@ -755,7 +739,7 @@ async function generateCatalogPDF(list){
     if(p.image){
       try{
         const imgData = await withTimeout((async () => {
-          const res = await fetch(mediumUrl(p.image));
+          const res = await fetch(p.image);
           if(!res.ok) throw new Error("fetch failed: " + res.status);
           const blob = await res.blob();
           const objectUrl = URL.createObjectURL(blob);
@@ -880,6 +864,20 @@ loadMoreBtn.addEventListener("click", () => {
 
 selectAllBtn.addEventListener("click", toggleSelectAll);
 
+// Delegated so the hardcoded chips already in the HTML work immediately,
+// without waiting for renderChips()/Firestore to run first.
+catChips.addEventListener("click", (e) => {
+  const btn = e.target.closest(".cat-chip");
+  if(!btn) return;
+  const cat = btn.dataset.cat;
+  if(state.activeCategory === cat && state.hasStarted) return;
+  state.activeCategory = cat;
+  state.hasStarted = true;
+  state.sortBy = "priceLow";
+  sortSelect.value = "priceLow";
+  fetchProducts({ category: cat, loadMore: false });
+});
+
 grid.addEventListener("click", (e) => {
   const card = e.target.closest(".card");
   if(!card || card.classList.contains("card-skel")) return;
@@ -912,9 +910,11 @@ $("sendPdfBtn").addEventListener("click", () => {
 });
 
 /* ---------------------------------------------------------------
-   BOOT — only categories load on open (cheap, one read of the
-   categories collection). Products are fetched only once the user
-   taps a category or types a search, to keep Firestore reads down.
+   BOOT — category chips are hardcoded in the HTML and already
+   visible before this script even runs, so the UI is never blocked
+   waiting on Firestore. loadCategories() only syncs additions/renames
+   in the background. Products are fetched only once the user taps a
+   category or types a search, to keep Firestore reads down.
 --------------------------------------------------------------- */
 render();
 loadCategories();
