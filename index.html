@@ -263,6 +263,7 @@ try{
 
 const FETCH_LIMIT = 24;
 const PAGE_SIZE = 12;
+const DELTA_LIMIT = 30; // cap on the background delta-sync query so a very stale cache can't trigger a massive read
 
 /* ---------------------------------------------------------------
    LOCAL PRODUCT CACHE (localStorage) — kills repeat Firestore reads
@@ -542,7 +543,8 @@ async function deltaSyncProducts(category){
       collection(db, "products"),
       where("category", "==", category),
       where("createdAt", ">", newestCreatedAt),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(DELTA_LIMIT)
     ));
 
     if(snap.empty) return; // already fully caught up
@@ -583,10 +585,19 @@ async function deltaSyncProducts(category){
       hasMoreRemote: state.hasMoreRemote
     });
   }catch(err){
-    // Silent by design. Most likely cause is a missing composite index
-    // (category ASC, createdAt DESC) — Firestore's error includes a direct
-    // console link to create it; the cached grid stays visible either way.
-    console.error("Delta sync error:", err);
+    // Silent by design — never blocks or breaks the UI, the cached grid the
+    // user already sees just stays put.
+    if(err && err.code === "failed-precondition"){
+      // Missing composite index (category ASC, createdAt DESC). Firestore's
+      // error message includes a direct console link to create it — surface
+      // that clearly instead of a generic "fetch error" log.
+      console.error(
+        "Delta sync needs a Firestore composite index (category + createdAt). Click the link in the error below to create it:",
+        err
+      );
+    }else{
+      console.error("Delta sync error:", err);
+    }
   }
 }
 
